@@ -1,5 +1,6 @@
 from itertools import product
 import numpy as np
+from typing import NewType, Tuple
 
 
 class Deck:
@@ -13,6 +14,7 @@ class Deck:
     DIAMONDS = "D"
     SPADES = "S"
     NO_CARD = 0
+    CardType = NewType('CardType', Tuple[int, str])
 
     def __init__(self):
         self.__deck = list(product([6, 7, 8, 9, 10, self.JACK, self.QUEEN, self.KING, self.ACE],
@@ -45,3 +47,4 @@ class Deck:
 
     def __str__(self):
         return str(self.__deck)
+
