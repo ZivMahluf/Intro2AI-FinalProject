@@ -9,12 +9,14 @@ class Deck:
     QUEEN = 12
     KING = 13
     ACE = 14
-    HEARTS = "H"
-    CLUBS = "C"
-    DIAMONDS = "D"
-    SPADES = "S"
+    HEARTS = 0  # "H"
+    CLUBS = 1  # "C"
+    DIAMONDS = 2  # "D"
+    SPADES = 3  # "S"
+    STRING_RANKS = {HEARTS: "H", CLUBS: "C", DIAMONDS: "D", SPADES: "S"}
+    RANKS = [HEARTS, CLUBS, DIAMONDS, SPADES]
     NO_CARD = 0
-    CardType = NewType('CardType', Tuple[int, str])
+    CardType = NewType('CardType', Tuple[int, int])
 
     def __init__(self):
         self.__deck = list(product([6, 7, 8, 9, 10, self.JACK, self.QUEEN, self.KING, self.ACE],

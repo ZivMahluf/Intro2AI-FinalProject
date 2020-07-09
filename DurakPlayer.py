@@ -1,9 +1,11 @@
 from Deck import Deck
 from typing import List, Tuple, Set, Optional, Dict, NewType
+import pygame
 # Optional[ObjectType] means it can be None or ObjectType
 
 # todo: maybe define a new type for table instead of using "table: Tuple[List[Deck.CardType], List[Deck.CardType]]"
 # TableType = NewType('TableType', Tuple[List[Deck.CardType], List[Deck.CardType]])
+
 
 class DurakPlayer:
 
@@ -13,16 +15,16 @@ class DurakPlayer:
         self.__hand_size = hand_size
         self.__name = name
 
-    def take_cards(self, cards: Deck.CardType) -> None:
+    def take_cards(self, cards: List[Deck.CardType]) -> None:
         self._hand = self._hand + cards
 
     def set_trump_rank(self, rank: int) -> None:
         self._trump_rank = rank
 
-    def attack(self, state) -> None:
+    def attack(self, state, legal_cards_to_play) -> None:
         raise NotImplementedError()
 
-    def defend(self, state) -> None:
+    def defend(self, state, legal_cards_to_play) -> None:
         raise NotImplementedError()
 
     def is_starting_hand_legal(self) -> bool:
@@ -74,40 +76,21 @@ class DurakPlayer:
 
 class BasePlayer(DurakPlayer):
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> Deck.CardType:
-        attacking, defending = table
-        if len(attacking) == 0:
-            attacking_card = self.__get_lowest_card(self._hand)
-        else:
-            legal_cards = list()
-            for card in self._hand:
-                if self.__is_value_on_table(card[0], table):
-                    legal_cards.append(card)
-            if len(legal_cards):
-                attacking_card = self.__get_lowest_card(legal_cards)
-            else:
-                attacking_card = Deck.NO_CARD
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        attacking_card = self.__get_lowest_card(legal_cards_to_play)
         if attacking_card != Deck.NO_CARD:
             self._hand.remove(attacking_card)
         return attacking_card
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> Deck.CardType:
-        attacking, defending = table
-        defend_from = attacking[-1]
-        legal_cards = list()
-        for card in self._hand:
-            if (card[1] == defend_from[1]) and (defend_from[0] < card[0]):
-                legal_cards.append(card)
-            elif (card[1] == self._trump_rank) and (defend_from[1] != self._trump_rank):
-                legal_cards.append(card)
-        if len(legal_cards) == 0:
-            defending_card = Deck.NO_CARD
-        else:
-            defending_card = self.__get_lowest_card(legal_cards)
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        defending_card = self.__get_lowest_card(legal_cards_to_play)
+        if defending_card != Deck.NO_CARD:
             self._hand.remove(defending_card)
         return defending_card
 
     def __get_lowest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
+        if len(cards) == 0:
+            return Deck.NO_CARD
         lowest_card = cards[0]
         for card in cards[1:]:
             value, rank = card
@@ -117,14 +100,6 @@ class BasePlayer(DurakPlayer):
             elif lowest_card[1] == self._trump_rank:
                 lowest_card = card
         return lowest_card
-
-    @staticmethod
-    def __is_value_on_table(value: int, table: Tuple[List[Deck.CardType], List[Deck.CardType]]):
-        for group in table:
-            for card_value, _ in group:
-                if card_value == value:
-                    return True
-        return False
 
 
 class DurakPlayerWithMemory(DurakPlayer):
@@ -167,8 +142,27 @@ class DurakPlayerWithMemory(DurakPlayer):
 
 class HumanPlayer(DurakPlayer):
 
-    def attack(self, state):
-        pass
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        attacking_card = self.__get_lowest_card(legal_cards_to_play)
+        if attacking_card != Deck.NO_CARD:
+            self._hand.remove(attacking_card)
+        return attacking_card
 
-    def defend(self, state):
-        pass
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        defending_card = self.__get_lowest_card(legal_cards_to_play)
+        if defending_card != Deck.NO_CARD:
+            self._hand.remove(defending_card)
+        return defending_card
+
+    def __get_lowest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
+        if len(cards) == 0:
+            return Deck.NO_CARD
+        lowest_card = cards[0]
+        for card in cards[1:]:
+            value, rank = card
+            if (self._trump_rank not in [rank, lowest_card[1]]) or ((rank == self._trump_rank) and (lowest_card[1] == self._trump_rank)):
+                if value < lowest_card[0]:
+                    lowest_card = card
+            elif lowest_card[1] == self._trump_rank:
+                lowest_card = card
+        return lowest_card
