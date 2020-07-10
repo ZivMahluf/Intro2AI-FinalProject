@@ -1,5 +1,6 @@
 from Deck import Deck
 from typing import List, Tuple, Set, Optional, Dict, NewType
+import random
 import pygame
 # Optional[ObjectType] means it can be None or ObjectType
 
@@ -138,6 +139,29 @@ class DurakPlayerWithMemory(DurakPlayer):
         # The cards in [name]'s hand are the cards that were previously in his hand minus the new ones
         self.other_players_hand[name] = self.other_players_hand[name] - cards
         self.discard_pile = self.discard_pile | cards
+
+
+class RandomPlayer(DurakPlayer):
+    """
+    Random agent
+    """
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        """
+        chooses a random card from legal cards to play
+        """
+        attacking_card = random.choice(legal_cards_to_play)
+        if attacking_card != Deck.NO_CARD:
+            self._hand.remove(attacking_card)
+        return attacking_card
+
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        """
+        chooses a random card from legal cards to play
+        """
+        defending_card = random.choice(legal_cards_to_play)
+        if defending_card != Deck.NO_CARD:
+            self._hand.remove(defending_card)
+        return defending_card
 
 
 class HumanPlayer(DurakPlayer):
