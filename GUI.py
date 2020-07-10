@@ -20,6 +20,8 @@ class GUI:
         self.__num_players_to_positions = {i: [(self.__side_length // 2 + int(self.__radius * cos(radians(90 + j * (360 // i)))),
                                                 self.__side_length // 2 - 35 + int(self.__radius * sin(radians(90 + j * (360 // i))))) for j in range(i)] for i in range(deck.total_num_cards)}
         self.__font = pygame.font.Font(pygame.font.get_default_font(), self.__size)
+        self.__human_player_horizontal_space = 0
+        self.__human_player_cards_positions = list()
 
     def __init_images(self, deck):
         self.__card_images = dict()
@@ -49,6 +51,7 @@ class GUI:
                 self.__rank_images[rank] = pygame.image.load(os.path.join("Images", "Spades.png"))
         self.__table_image = pygame.image.load(os.path.join("Images", "Table.png"))
         self.__back_of_card_image = pygame.image.load(os.path.join("Images", "ZCardBack.png"))
+        self.__highlight_image = pygame.image.load(os.path.join("Images", "Highlight.png"))
         self.__initial_card_position = (self.__side_length // 2 - 3 * (self.__card_size[0] + self.__horizontal_space), self.__side_length // 2 - (3 * self.__card_size[1]) // 2)
         self.__deck_initial_pos = (self.__side_length // 2 - self.__card_size[0] // 2, self.__side_length // 2 + self.__card_size[1] // 2)
 
@@ -56,6 +59,7 @@ class GUI:
         self.__screen.fill((0, 0, 0))
         self.__screen.blit(self.__table_image, (0, 0))
         self.__screen.blit(self.__rank_images[trump_rank], (0, 0))
+        self.__human_player_cards_positions = list()
         for i, position in enumerate(self.__num_players_to_positions[len(players)]):
             if players[i] == attacker:
                 text = self.__font.render(players[i].name, True, (255, 0, 0))
@@ -69,11 +73,11 @@ class GUI:
             rect.center = position
             self.__screen.blit(text, rect.topleft)
             if type(players[i]) == HumanPlayer:
-                horizontal_space = 0
                 if players[i].hand_size:
-                    horizontal_space = (self.__side_length - 20) // players[i].hand_size
+                    self.__human_player_horizontal_space = (self.__side_length - 20) // players[i].hand_size
                 for j, card in enumerate(players[i].hand):
-                    self.__screen.blit(self.__card_images[card], (10 + j * horizontal_space, self.__side_length + 15))
+                    self.__human_player_cards_positions.append((10 + j * self.__human_player_horizontal_space, self.__side_length + 15))
+                    self.__screen.blit(self.__card_images[card], self.__human_player_cards_positions[-1])
             else:
                 for j in range(players[i].hand_size):
                     self.__screen.blit(self.__back_of_card_image, (rect.left + j * 4, rect.bottom))
@@ -89,3 +93,19 @@ class GUI:
     @staticmethod
     def end():
         pygame.quit()
+
+    @property
+    def table_height(self):
+        return self.__side_length
+
+    @property
+    def human_player_cards_menu_height(self):
+        return self.__human_player_cards_menu_height
+
+    @property
+    def card_size(self):
+        return self.__card_size
+
+    @property
+    def human_player_cards_positions(self):
+        return self.__human_player_cards_positions

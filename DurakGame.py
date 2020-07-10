@@ -21,12 +21,13 @@ class DurakGame:
 
     def add_player(self, player):
         if len(self.__players) < self.MAX_PLAYERS:
-            self.__players.append(player)
             if type(player) == HumanPlayer and not self.__human_player_in_game:
                 self.__human_player_in_game = True
                 self.__constant_order_players.insert(0, player)
+                self.__players.insert(0, player)
             elif type(player) != HumanPlayer:
                 self.__constant_order_players.append(player)
+                self.__players.append(player)
 
     def __reset_table(self):
         self.__attacking = list()
@@ -47,6 +48,7 @@ class DurakGame:
                 self.__do_round()
             self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
             self.__players = self.__players + self.__out_players
+
         self.__gui.end()
 
     def __initialize_deck(self):
@@ -159,6 +161,7 @@ class DurakGame:
                         adding_player = self.__attacker
                         card_to_add = Deck.NO_CARD
                         while adding_player != self.__defender:
+                            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
                             if self.__players[adding_player].hand_size:
                                 card_to_add = self.__players[adding_player].attack(self.__table, self.__get_legal_attack_cards(self.__players[adding_player]))
                             if card_to_add != Deck.NO_CARD:
@@ -199,8 +202,10 @@ class DurakGame:
         else:
             if len(self.__players):
                 self.__losers.append(self.__players[0])
+                print(self.__players[0].name, "lost!")
             else:
                 self.__losers.append(None)
+                print("Game ended in a " + str(len(self.__constant_order_players)) + "-way draw!")
             self.__playing = False
 
     def __get_legal_attack_cards(self, attacker: DurakPlayer):
@@ -238,12 +243,16 @@ class DurakGame:
     def losers(self):
         return [loser.name for loser in self.__losers if loser is not None]
 
+    @property
+    def gui(self):
+        return self.__gui
+
 
 games = 10
 game = DurakGame()
 game.add_player(BasePlayer(game.HAND_SIZE, "Ziv"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Idan"))
-game.add_player(HumanPlayer(game.HAND_SIZE, "Vitaly"))
+game.add_player(BasePlayer(game.HAND_SIZE, "Vitaly"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Eyal"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Yoni"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Jeff"))
