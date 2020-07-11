@@ -18,7 +18,7 @@ class GUI:
         self.__screen = pygame.display.set_mode((self.__side_length, self.__side_length + self.__human_player_cards_menu_height))
         self.__init_images(deck)
         self.__num_players_to_positions = {i: [(self.__side_length // 2 + int(self.__radius * cos(radians(90 + j * (360 // i)))),
-                                                self.__side_length // 2 - 35 + int(self.__radius * sin(radians(90 + j * (360 // i))))) for j in range(i)] for i in range(deck.total_num_cards)}
+                                                self.__side_length // 2 - 35 + int(self.__radius * sin(radians(90 + j * (360 // i))))) for j in range(i)] for i in range(deck.total_num_cards + 1)}
         self.__font = pygame.font.Font(pygame.font.get_default_font(), self.__size)
         self.__human_player_horizontal_space = 0
         self.__human_player_cards_positions = list()
@@ -88,7 +88,15 @@ class GUI:
         for i in range(deck.current_num_cards):
             self.__screen.blit(self.__back_of_card_image, (self.__deck_initial_pos[0], self.__deck_initial_pos[1] - i))
         pygame.display.flip()
-        pygame.time.wait(50)
+        pygame.time.wait(1000)
+
+    def show_message(self, message):
+        text = self.__font.render(message, True, (150, 150, 150))
+        rect = text.get_rect()
+        human_player_text_position = self.__num_players_to_positions[1][0]
+        rect.center = (human_player_text_position[0], human_player_text_position[1] + self.__size + 10)
+        self.__screen.blit(text, rect.topleft)
+        pygame.display.flip()
 
     @staticmethod
     def end():
