@@ -32,7 +32,7 @@ class DurakGame:
     def __reset_table(self):
         self.__attacking = list()
         self.__defending = list()
-        self.__table = [self.__attacking, self.__defending]
+        self.__table = (self.__attacking, self.__defending)
 
     def play_games(self, num_games=1):
         for g in range(num_games):
@@ -123,27 +123,30 @@ class DurakGame:
             - if not taken:
                 - get next attacking card
         """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.__playing = False
-                self.__quit_games = True
-                return
         defending = True
         successfully_defended = False
         attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
         while defending:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.__playing = False
+                    self.__quit_games = True
+                    return
             self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
             # attacking
             if len(self.__attacking) == 0:
                 # it is forbidden that the attacker doesn't put a card if the table is empty.
                 attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
+                attacker_name = self.__players[self.__attacker].name
             else:
                 attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
+                attacker_name = self.__players[self.__attacker].name
                 if attacking_card == Deck.NO_CARD:
                     next_attacker = (self.__attacker + 1) % len(self.__players)
                     while next_attacker != self.__defender:
                         if self.__players[next_attacker].hand_size:
                             attacking_card = self.__players[next_attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[next_attacker]))
+                            attacker_name = self.__players[next_attacker].name
                             if attacking_card == Deck.NO_CARD:
                                 next_attacker += 1
                             else:
@@ -152,6 +155,8 @@ class DurakGame:
                             next_attacker += 1
             if attacking_card != Deck.NO_CARD:
                 self.__attacking.append(attacking_card)
+                for player in self.__players:
+                    player.update_round_progress(attacker_name, attacking_card)
                 self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
                 # defending
                 defending_card = self.__players[self.__defender].defend(self.__table, self.__get_legal_defending_cards(self.__players[self.__defender]))
@@ -166,6 +171,8 @@ class DurakGame:
                                 card_to_add = self.__players[adding_player].attack(self.__table, self.__get_legal_attack_cards(self.__players[adding_player]))
                             if card_to_add != Deck.NO_CARD:
                                 self.__attacking.append(card_to_add)
+                                for player in self.__players:
+                                    player.update_round_progress(self.__players[adding_player].name, card_to_add)
                             else:
                                 adding_player += 1
                                 if adding_player == self.__defender:
@@ -177,6 +184,9 @@ class DurakGame:
                     defending = False
                 else:
                     self.__defending.append(defending_card)
+                    for player in self.__players:
+                        player.update_round_progress(self.__players[self.__defender].name, defending_card)
+                    self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
             else:
                 defending = False
                 successfully_defended = True
@@ -248,11 +258,11 @@ class DurakGame:
         return self.__gui
 
 
-games = 10
+games = 2
 game = DurakGame()
 game.add_player(BasePlayer(game.HAND_SIZE, "Ziv"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Idan"))
-game.add_player(BasePlayer(game.HAND_SIZE, "Vitaly"))
+game.add_player(HumanPlayer(game.HAND_SIZE, "Vitaly", game.gui))
 game.add_player(BasePlayer(game.HAND_SIZE, "Eyal"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Yoni"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Jeff"))
