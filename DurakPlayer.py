@@ -95,28 +95,23 @@ class DurakPlayer:
 class BasePlayer(DurakPlayer):
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
-        attacking_card = self.__get_lowest_card(legal_cards_to_play)
-        if attacking_card != Deck.NO_CARD:
-            self._hand.remove(attacking_card)
-        return attacking_card
+        return self.__do_basic_play(legal_cards_to_play)
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
-        defending_card = self.__get_lowest_card(legal_cards_to_play)
-        if defending_card != Deck.NO_CARD:
-            self._hand.remove(defending_card)
-        return defending_card
+        return self.__do_basic_play(legal_cards_to_play)
 
-    def __get_lowest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
-        if len(cards) == 0:
+    def __do_basic_play(self, legal_cards_to_play):
+        if len(legal_cards_to_play) == 1:
             return Deck.NO_CARD
-        lowest_card = cards[0]
-        for card in cards[1:]:
+        lowest_card = legal_cards_to_play[1]
+        for card in legal_cards_to_play[2:]:
             value, rank = card
             if (self._trump_rank not in [rank, lowest_card[1]]) or ((rank == self._trump_rank) and (lowest_card[1] == self._trump_rank)):
                 if value < lowest_card[0]:
                     lowest_card = card
             elif lowest_card[1] == self._trump_rank:
                 lowest_card = card
+        self._hand.remove(lowest_card)
         return lowest_card
 
 
@@ -188,55 +183,30 @@ class HumanPlayer(DurakPlayer):
         self.__game_gui = gui
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
-        waiting = True
-        attacking_card = Deck.NO_CARD
-        self.__game_gui.show_message("- Attack -")
-        while waiting:
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONUP:
-                    if event.button == 1:
-                        pressed_card = self.__get_pressed_card()
-                        if pressed_card != Deck.NO_CARD:
-                            if pressed_card in legal_cards_to_play:
-                                attacking_card = pressed_card
-                                waiting = False
-                    elif event.button == 3:
-                        waiting = False
-        if attacking_card != Deck.NO_CARD:
-            self._hand.remove(attacking_card)
-        return attacking_card
+        return self.__get_card(legal_cards_to_play, "- Attack -")
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        return self.__get_card(legal_cards_to_play, "- Defend -")
+
+    def __get_card(self, legal_cards_to_play, message):
+        self.__game_gui.show_message(message)
         waiting = True
-        defending_card = Deck.NO_CARD
-        self.__game_gui.show_message("- Defend -")
+        selected_card = Deck.NO_CARD
         while waiting:
             for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONUP:
+                if event.type == pygame.QUIT:
+                    return None
+                elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
                         pressed_card = self.__get_pressed_card()
-                        if pressed_card != Deck.NO_CARD:
-                            if pressed_card in legal_cards_to_play:
-                                defending_card = pressed_card
-                                waiting = False
+                        if pressed_card in legal_cards_to_play:
+                            selected_card = pressed_card
+                            waiting = False
                     elif event.button == 3:
                         waiting = False
-        if defending_card != Deck.NO_CARD:
-            self._hand.remove(defending_card)
-        return defending_card
-
-    def __get_lowest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
-        if len(cards) == 0:
-            return Deck.NO_CARD
-        lowest_card = cards[0]
-        for card in cards[1:]:
-            value, rank = card
-            if (self._trump_rank not in [rank, lowest_card[1]]) or ((rank == self._trump_rank) and (lowest_card[1] == self._trump_rank)):
-                if value < lowest_card[0]:
-                    lowest_card = card
-            elif lowest_card[1] == self._trump_rank:
-                lowest_card = card
-        return lowest_card
+        if selected_card != Deck.NO_CARD:
+            self._hand.remove(selected_card)
+        return selected_card
 
     def __get_pressed_card(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()

@@ -64,9 +64,11 @@ class DurakGame:
         self.__playing = True
         self.__reset_table()
         self.__out_players = list()
-        # self.__prev_table = []
-        # self.__prev_action = Deck.NO_CARD
-        # self.__reward = 0
+        self.__successfully_defended = False
+        self.__attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
+        self.__prev_table = tuple()
+        self.__prev_action = Deck.NO_CARD
+        self.__reward = 0
 
     def __deal_hands(self):
         for player in self.__players:
@@ -124,118 +126,150 @@ class DurakGame:
                 - get next attacking card
         """
         defending = True
-        successfully_defended = False
-        attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
-        while defending:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.__playing = False
-                    self.__quit_games = True
-                    return
-            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
-            # attacking
-            if len(self.__attacking) == 0:
-                # it is forbidden that the attacker doesn't put a card if the table is empty.
-                attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
-                attacker_name = self.__players[self.__attacker].name
-            else:
-                attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
-                attacker_name = self.__players[self.__attacker].name
-                if attacking_card == Deck.NO_CARD:
-                    next_attacker = (self.__attacker + 1) % len(self.__players)
-                    while next_attacker != self.__defender:
-                        if self.__players[next_attacker].hand_size:
-                            attacking_card = self.__players[next_attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[next_attacker]))
-                            attacker_name = self.__players[next_attacker].name
-                            if attacking_card == Deck.NO_CARD:
-                                next_attacker += 1
-                            else:
-                                break
-                        else:
-                            next_attacker += 1
-            if attacking_card != Deck.NO_CARD:
-                self.__attacking.append(attacking_card)
-                for player in self.__players:
-                    player.update_round_progress(attacker_name, attacking_card)
-                self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
-                # defending
-                defending_card = self.__players[self.__defender].defend(self.__table, self.__get_legal_defending_cards(self.__players[self.__defender]))
-                if defending_card == Deck.NO_CARD:
-                    # If the defender took the cards, then the attackers have the option to add more cards, up to the attacking limit
-                    if len(self.__attacking) < attacking_limit:
-                        adding_player = self.__attacker
-                        card_to_add = Deck.NO_CARD
-                        while adding_player != self.__defender:
-                            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
-                            if self.__players[adding_player].hand_size:
-                                card_to_add = self.__players[adding_player].attack(self.__table, self.__get_legal_attack_cards(self.__players[adding_player]))
-                            if card_to_add != Deck.NO_CARD:
-                                self.__attacking.append(card_to_add)
-                                for player in self.__players:
-                                    player.update_round_progress(self.__players[adding_player].name, card_to_add)
-                            else:
-                                adding_player += 1
-                                if adding_player == self.__defender:
-                                    break
-                            if len(self.__attacking) == attacking_limit:
-                                break
-                    self.__players[self.__defender].take_cards(self.__defending)
-                    self.__players[self.__defender].take_cards(self.__attacking)
-                    defending = False
+        self.__successfully_defended = False
+        self.__attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
+        while defending and self.__playing:
+            self.__check_events()
+            if self.__playing:
+                defending = self.__do_mini_round()
+        if self.__playing:
+            self.__end_round()
+
+    def __check_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.__playing = False
+                self.__quit_games = True
+
+    def __do_mini_round(self):
+        attacker_name, attacking_card = self.__attack()
+        if attacking_card is None:
+            self.__playing = False
+            self.__quit_games = True
+            defending = False
+        elif attacking_card != Deck.NO_CARD:
+            self.__attacking.append(attacking_card)
+            self.__update_progress(attacker_name, attacking_card)
+            defending = self.__defend()
+        else:
+            defending = False
+            self.__successfully_defended = True
+        if defending and len(self.__attacking) == self.__attacking_limit:
+            defending = False
+            self.__successfully_defended = True
+        return defending
+
+    def __attack(self):
+        if self.__players[self.__attacker].hand_size:
+            attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
+        else:
+            attacking_card = Deck.NO_CARD
+        attacker_name = self.__players[self.__attacker].name
+        if attacking_card == Deck.NO_CARD:
+            next_attacker = (self.__attacker + 1) % len(self.__players)
+            while next_attacker != self.__defender:
+                if self.__players[next_attacker].hand_size:
+                    attacking_card = self.__players[next_attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[next_attacker]))
+                    if attacking_card == Deck.NO_CARD:
+                        next_attacker += 1
+                    else:
+                        attacker_name = self.__players[next_attacker].name
+                        break
                 else:
-                    self.__defending.append(defending_card)
-                    for player in self.__players:
-                        player.update_round_progress(self.__players[self.__defender].name, defending_card)
-                    self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
-            else:
-                defending = False
-                successfully_defended = True
-            if defending and len(self.__attacking) == attacking_limit:
-                defending = False
-                successfully_defended = True
-        # clearing the table
-        self.__reset_table()
-        # dealing cards as needed and eliminating winning players
+                    next_attacker += 1
+        return attacker_name, attacking_card
+
+    def __defend(self):
+        defending_card = self.__players[self.__defender].defend(self.__table, self.__get_legal_defending_cards(self.__players[self.__defender]))
+        if defending_card is None:
+            self.__playing = False
+            self.__quit_games = True
+            defending = False
+        elif defending_card != Deck.NO_CARD:
+            self.__defending.append(defending_card)
+            self.__update_progress(self.__players[self.__defender].name, defending_card)
+            defending = True
+        else:
+            defending = False
+        return defending
+
+    def __throw_in(self):
+        if len(self.__attacking) < self.__attacking_limit:
+            adding_player = self.__attacker
+            card_to_add = Deck.NO_CARD
+            while adding_player != self.__defender:
+                if self.__players[adding_player].hand_size:
+                    card_to_add = self.__players[adding_player].attack(self.__table, self.__get_legal_attack_cards(self.__players[adding_player]))
+                if card_to_add != Deck.NO_CARD:
+                    self.__attacking.append(card_to_add)
+                    self.__update_progress(self.__players[adding_player].name, card_to_add)
+                else:
+                    adding_player += 1
+                    if adding_player == self.__defender:
+                        break
+                if len(self.__attacking) == self.__attacking_limit:
+                    break
+
+    def __update_progress(self, name, card):
         for player in self.__players:
+            player.update_round_progress(name, card)
+        self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
+
+    def __end_round(self):
+        if not self.__successfully_defended:
+            self.__throw_in()
+            self.__players[self.__defender].take_cards(self.__defending + self.__attacking)
+        self.__reset_table()
+        self.__update_and_draw_cards()
+        self.__remove_winners()
+        self.__defender = len(self.__players) - 1
+        if self.MIN_PLAYERS <= len(self.__players):
+            self.__update_attacker_defender()
+            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
+        else:
+            self.__end_current_game()
+
+    def __update_and_draw_cards(self):
+        for player in self.__players:
+            player.update_end_round(self.__players[self.__defender].name, self.__table, self.__successfully_defended)
             player.take_cards(self.__deck.draw(max(self.HAND_SIZE - player.hand_size, 0)))
             if player.hand_size == 0:
                 self.__out_players.append(player)
+
+    def __remove_winners(self):
         for out_player in self.__out_players:
             if out_player in self.__players:
                 self.__players.remove(out_player)
-        self.__defender = len(self.__players) - 1
-        if self.MIN_PLAYERS <= len(self.__players):
+
+    def __update_attacker_defender(self):
+        self.__players.insert(self.__attacker, self.__players.pop(self.__defender))
+        if not self.__successfully_defended:
+            # If the defender failed to defend, the next attacker is the player that would be the next defender.
             self.__players.insert(self.__attacker, self.__players.pop(self.__defender))
-            if not successfully_defended:
-                # If the defender failed to defend, the next attacker is the player that would be the next defender.
-                self.__players.insert(self.__attacker, self.__players.pop(self.__defender))
+
+    def __end_current_game(self):
+        if len(self.__players):
+            self.__losers.append(self.__players[0])
+            print(self.__players[0].name, "lost!")
         else:
-            if len(self.__players):
-                self.__losers.append(self.__players[0])
-                print(self.__players[0].name, "lost!")
-            else:
-                self.__losers.append(None)
-                print("Game ended in a " + str(len(self.__constant_order_players)) + "-way draw!")
-            self.__playing = False
+            self.__losers.append(None)
+            print("Game ended in a " + str(len(self.__constant_order_players)) + "-way draw!")
+        self.__playing = False
 
     def __get_legal_attack_cards(self, attacker: DurakPlayer):
-        legal_attacking_cards = list()
-        attacking, defending = self.__table
-        if len(attacking) == 0:
+        if len(self.__table[0]) == 0:
             return attacker.hand
+        legal_attacking_cards = [Deck.NO_CARD]
         for card in attacker.hand:
-            for card_on_table in attacking:
-                if card[0] == card_on_table[0]:
-                    legal_attacking_cards.append(card)
-                    break
-            for card_on_table in defending:
-                if card[0] == card_on_table[0]:
-                    legal_attacking_cards.append(card)
-                    break
+            for i in range(len(self.__table)):
+                for card_on_table in self.__table[i]:
+                    if card[0] == card_on_table[0]:
+                        legal_attacking_cards.append(card)
+                        break
         return legal_attacking_cards
 
     def __get_legal_defending_cards(self, defender: DurakPlayer):
-        legal_defending_cards = list()
+        legal_defending_cards = [Deck.NO_CARD]
         attacking_card = self.__table[0][-1]
         for card in defender.hand:
             if attacking_card[1] == card[1]:
@@ -258,7 +292,7 @@ class DurakGame:
         return self.__gui
 
 
-games = 2
+games = 1
 game = DurakGame()
 game.add_player(BasePlayer(game.HAND_SIZE, "Ziv"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Idan"))
