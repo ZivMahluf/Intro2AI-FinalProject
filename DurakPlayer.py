@@ -11,47 +11,71 @@ import pygame
 class DurakPlayer:
 
     def __init__(self, hand_size: int, name: str):
+        """
+        Constructor.
+        :param hand_size: Initial hand size.
+        :param name: Name of the player.
+        """
         self._hand = []
         self._trump_rank = None
-        self.__hand_size = hand_size
+        self.__initial_hand_size = hand_size
         self.__name = name
 
     def take_cards(self, cards: List[Deck.CardType]) -> None:
+        """
+        Adds the cards to the hand.
+        :param cards: A list of cards to add.
+        """
         self._hand = self._hand + cards
 
     def set_trump_rank(self, rank: int) -> None:
+        """
+        Sets the trump rank as the given rank.
+        :param rank: Rank to set as trump rank.
+        """
         self._trump_rank = rank
 
-    def attack(self, state, legal_cards_to_play) -> None:
+    def attack(self, state, legal_cards_to_play) -> Deck.CardType:
         raise NotImplementedError()
 
-    def defend(self, state, legal_cards_to_play) -> None:
+    def defend(self, state, legal_cards_to_play) -> Deck.CardType:
         raise NotImplementedError()
 
     def is_starting_hand_legal(self) -> bool:
+        """
+        A legal starting hand is one in which there are at most (initial hand size - 2) cards of each rank, and there is at least one 'red'
+        card (hearts or diamonds), and one 'black' card (spades or clubs).
+        :return: Weather the cards in the hand form a legal starting hand.
+        """
         num_hearts = 0
         num_diamonds = 0
         num_spades = 0
         num_clubs = 0
-        for _, series in self._hand:
-            if series == Deck.HEARTS:
+        for _, rank in self._hand:
+            if rank == Deck.HEARTS:
                 num_hearts += 1
-            elif series == Deck.DIAMONDS:
+            elif rank == Deck.DIAMONDS:
                 num_diamonds += 1
-            elif series == Deck.SPADES:
+            elif rank == Deck.SPADES:
                 num_spades += 1
             else:
                 num_clubs += 1
-        if ((self.__hand_size - 1) in [num_hearts, num_diamonds, num_spades, num_clubs]) or \
-                ((num_hearts + num_diamonds) == self.__hand_size) or \
-                ((num_spades + num_clubs) == self.__hand_size):
+        if ((self.__initial_hand_size - 1) in [num_hearts, num_diamonds, num_spades, num_clubs]) or \
+                ((num_hearts + num_diamonds) == self.__initial_hand_size) or \
+                ((num_spades + num_clubs) == self.__initial_hand_size):
             return False
         return True
 
     def empty_hand(self) -> None:
+        """
+        Empties the current hand.
+        """
         self._hand = []
 
     def get_lowest_trump(self) -> int:
+        """
+        :return: The value of the lowest card with a trump rank, or Deck.NO_CARD is no card has a trump rank in the hand.
+        """
         min_trump = Deck.NO_CARD
         for value, series in self._hand:
             if series == self._trump_rank:
@@ -78,21 +102,37 @@ class DurakPlayer:
 
     @property
     def hand_size(self) -> int:
+        """
+        :return: Number of cards in the current hand.
+        """
         return len(self._hand)
 
     @property
     def hand(self) -> List[Deck.CardType]:
+        """
+        :return: A list of all cards currently in the hand of the player.
+        """
         return self._hand
 
     @property
     def name(self) -> str:
+        """
+        :return: The name of the player.
+        """
         return self.__name
 
     def __str__(self) -> str:
+        """
+        :return: String representation of the player (as a string representation of the hand)
+        """
         return str(self._hand)
 
 
 class BasePlayer(DurakPlayer):
+
+    """
+    A player of this class always plays the weakest card possible from the given list of legal cards.
+    """
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
         return self.__do_basic_play(legal_cards_to_play)
@@ -100,7 +140,13 @@ class BasePlayer(DurakPlayer):
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
         return self.__do_basic_play(legal_cards_to_play)
 
-    def __do_basic_play(self, legal_cards_to_play):
+    def __do_basic_play(self, legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+        """
+        Chooses the weakest card from the given list of cards.
+        The weakest card is the card with the lowest value. Any trump card has a higher value than any non-trump card.
+        :param legal_cards_to_play: A list of available cards to choose from (might include Deck.NO_CARD).
+        :return: The card with the lowest value from the legal cards.
+        """
         if len(legal_cards_to_play) == 1:
             return Deck.NO_CARD
         lowest_card = legal_cards_to_play[1]
@@ -179,6 +225,12 @@ class RandomPlayer(DurakPlayer):
 class HumanPlayer(DurakPlayer):
 
     def __init__(self, hand_size: int, name: str, gui):
+        """
+        Constructor.
+        :param hand_size: Number of cards in the initial hand of the player.
+        :param name: Name of the player.
+        :param gui: GUI object of the game.
+        """
         DurakPlayer.__init__(self, hand_size, name)
         self.__game_gui = gui
 
@@ -188,7 +240,15 @@ class HumanPlayer(DurakPlayer):
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
         return self.__get_card(legal_cards_to_play, "- Defend -")
 
-    def __get_card(self, legal_cards_to_play, message):
+    def __get_card(self, legal_cards_to_play: List[Deck.CardType], message: str = "") -> Optional[Deck.CardType]:
+        """
+        Gets a card selected by the player, and removes it from the hand of the player.
+        A left click on a legal card in the hand selects it, and a right click anywhere selects to play Deck.NO_CARD. If the selected card
+        (including Deck.NO_CARD) is not in the list of legal cards, nothing happens.
+        :param legal_cards_to_play: List of legal cards to choose from.
+        :param message: A message to display to the player.
+        :return: A card to play (can also return Deck.NO_CARD), or None in case the player pressed the x button to quit the game.
+        """
         self.__game_gui.show_message(message)
         waiting = True
         selected_card = Deck.NO_CARD
@@ -198,17 +258,23 @@ class HumanPlayer(DurakPlayer):
                     return None
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
-                        pressed_card = self.__get_pressed_card()
-                        if pressed_card in legal_cards_to_play:
-                            selected_card = pressed_card
-                            waiting = False
+                        pressed_card = self.__get_clicked_card()
+                        if pressed_card != Deck.NO_CARD:
+                            if pressed_card in legal_cards_to_play:
+                                selected_card = pressed_card
+                                waiting = False
                     elif event.button == 3:
-                        waiting = False
+                        if Deck.NO_CARD in legal_cards_to_play:
+                            waiting = False
         if selected_card != Deck.NO_CARD:
             self._hand.remove(selected_card)
         return selected_card
 
-    def __get_pressed_card(self):
+    def __get_clicked_card(self) -> Deck.CardType:
+        """
+        Detects which card the player clicked on and returns is.
+        :return: The card in the player's hand which was clicked on.
+        """
         mouse_x, mouse_y = pygame.mouse.get_pos()
         card_w, card_h = self.__game_gui.card_size
         positions = self.__game_gui.human_player_cards_positions
