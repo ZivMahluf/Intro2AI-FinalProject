@@ -59,6 +59,23 @@ class DurakPlayer:
                     min_trump = value
         return min_trump
 
+    def update_round_progress(self, player_name: str, played_card: Deck.CardType) -> None:
+        """
+        Updates the agent about a card that was played by a player.
+        :param player_name: Name of the player that played.
+        :param played_card: The card played by that player.
+        """
+        pass
+
+    def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]], successfully_defended: bool) -> None:
+        """
+        Updates the agent about the result of the round - weather the defending player defended successfully or not.
+        :param defending_player_name: Defending player's name
+        :param table: Cards on the table at the end of the round (before clearing)
+        :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
+        """
+        pass
+
     @property
     def hand_size(self) -> int:
         return len(self._hand)
@@ -173,6 +190,7 @@ class HumanPlayer(DurakPlayer):
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
         waiting = True
         attacking_card = Deck.NO_CARD
+        self.__game_gui.show_message("- Attack -")
         while waiting:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONUP:
@@ -191,6 +209,7 @@ class HumanPlayer(DurakPlayer):
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
         waiting = True
         defending_card = Deck.NO_CARD
+        self.__game_gui.show_message("- Defend -")
         while waiting:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONUP:
