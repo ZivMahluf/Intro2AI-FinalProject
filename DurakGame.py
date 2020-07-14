@@ -213,7 +213,7 @@ class DurakGame:
         If a defending card is played, then the defence continues, if it's Deck.NO_CARD, then the defender lost the round and takes all cards, and if it's None, then the x
         button was clicked, and the game ends.
         """
-        defending_card = self.__players[self.__defender].defend(self.__table, self.__get_legal_defending_cards(self.__players[self.__defender]))
+        defending_card = self.__players[self.__defender].defend(self.__table, self.__get_legal_defending_cards())
         if defending_card is None:
             self.__playing = False
             self.__quit_games = True
