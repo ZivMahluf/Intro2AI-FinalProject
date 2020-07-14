@@ -1,4 +1,4 @@
-from DurakPlayer import DurakPlayer, BasePlayer, HumanPlayer
+from DurakPlayer import DurakPlayer, BasePlayer, HumanPlayer, DefensivePlayer, AggressivePlayer
 from typing import Tuple, List
 from Deck import Deck
 from GUI import GUI
@@ -377,10 +377,10 @@ class DurakGame:
 
 games = 1
 game = DurakGame()
-game.add_player(BasePlayer(game.HAND_SIZE, "Ziv"))
+game.add_player(AggressivePlayer(game.HAND_SIZE, "Ziv"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Idan"))
 game.add_player(HumanPlayer(game.HAND_SIZE, "Vitaly", game.gui))
 game.add_player(BasePlayer(game.HAND_SIZE, "Eyal"))
 game.add_player(BasePlayer(game.HAND_SIZE, "Yoni"))
-game.add_player(BasePlayer(game.HAND_SIZE, "Jeff"))
+game.add_player(DefensivePlayer(game.HAND_SIZE, "Jeff"))
 game.play_games(games)
