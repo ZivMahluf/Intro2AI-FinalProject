@@ -1,4 +1,4 @@
-from DurakPlayer import DurakPlayer, BasePlayer, HumanPlayer, DefensivePlayer, AggressivePlayer
+from DurakPlayer import DurakPlayer, BasePlayer, HumanPlayer, DefensivePlayer, AggressivePlayer, LearningPlayer
 from typing import Tuple, List
 from Deck import Deck
 from GUI import GUI
@@ -25,6 +25,7 @@ class DurakGame:
         self.__quit_games = False
         self.__human_player_in_game = False
         self.__gui = GUI(Deck())
+        self.__learning_agents_cumulative_rewards = {}
 
     def add_player(self, player: DurakPlayer) -> None:
         """
@@ -40,6 +41,8 @@ class DurakGame:
             elif type(player) != HumanPlayer:
                 self.__constant_order_players.append(player)
                 self.__players.append(player)
+            if type(player) == LearningPlayer:
+                self.__learning_agents_cumulative_rewards[player.name] = 0
 
     def __reset_table(self) -> None:
         """
@@ -55,6 +58,9 @@ class DurakGame:
         After the games, the GUI is shut down and no more games can be run with the same DurakGame object.
         :param num_games: Number of games to run.
         """
+        for player in self.__players:
+            if type(player) == LearningPlayer:
+                player.first_initialize(self.player_names, self.__deck.total_num_cards)
         for g in range(num_games):
             if self.__quit_games:
                 break
@@ -64,6 +70,10 @@ class DurakGame:
             self.__deal_hands()
             self.__check_hands()
             self.__set_first()
+            for player in self.__players:
+                if type(player) == LearningPlayer:
+                    player.first_initialize(self.player_names, self.__deck.total_num_cards)
+            self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
             while self.__playing:
                 self.__do_round()
             self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
@@ -136,6 +146,7 @@ class DurakGame:
         Plays a single round of the game.
         A single round consists of a series of mini rounds, followed by the end-of-round procedure.
         """
+        self.__reset_cumulative_rewards()
         defending = True
         self.__successfully_defended = False
         self.__attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
@@ -155,6 +166,10 @@ class DurakGame:
                 self.__playing = False
                 self.__quit_games = True
 
+    def __reset_cumulative_rewards(self):
+        for player in self.__learning_agents_cumulative_rewards.keys():
+            self.__learning_agents_cumulative_rewards[player] = 0
+
     def __do_mini_round(self) -> bool:
         """
         Plays a single mini round of the game.
@@ -169,6 +184,7 @@ class DurakGame:
             self.__quit_games = True
             defending = False
         elif attacking_card != Deck.NO_CARD:
+            self.__record_prev_table()
             self.__attacking.append(attacking_card)
             self.__update_progress(attacker_name, attacking_card)
             defending = self.__defend()
@@ -219,6 +235,7 @@ class DurakGame:
             self.__quit_games = True
             defending = False
         elif defending_card != Deck.NO_CARD:
+            self.__record_prev_table()
             self.__defending.append(defending_card)
             self.__update_progress(self.__players[self.__defender].name, defending_card)
             defending = True
@@ -239,8 +256,11 @@ class DurakGame:
                 if self.__players[adding_player].hand_size:
                     card_to_add = self.__players[adding_player].attack(self.__table, self.__get_legal_attack_cards(self.__players[adding_player]))
                 if card_to_add != Deck.NO_CARD:
+                    self.__record_prev_table()
                     self.__attacking.append(card_to_add)
                     self.__update_progress(self.__players[adding_player].name, card_to_add)
+                    if type(self.__players[adding_player]) == LearningPlayer:
+                        self.__players[adding_player].learn(self.__prev_table, card_to_add, 0, self.__table)
                 else:
                     adding_player += 1
                     if adding_player == self.__defender:
@@ -256,6 +276,19 @@ class DurakGame:
         """
         for player in self.__players:
             player.update_round_progress(name, card)
+            if type(player) == LearningPlayer and player.name == name:
+                if player == self.__players[self.__defender]:
+                    reward = card[0]
+                    if card[1] == self.__trump_rank:
+                        reward //= 2
+                        reward -= 1
+                else:
+                    reward = -card[0]
+                    if card[1] == self.__trump_rank:
+                        reward -= 1
+                        reward *= 2
+                self.__learning_agents_cumulative_rewards[name] = self.__learning_agents_cumulative_rewards[name] + reward
+                player.learn(self.__prev_table, card, reward, self.__table)
         self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
 
     def __end_round(self) -> None:
@@ -272,6 +305,7 @@ class DurakGame:
         if not self.__successfully_defended:
             self.__throw_in()
             self.__players[self.__defender].take_cards(self.__defending + self.__attacking)
+        self.__record_prev_table()
         self.__reset_table()
         self.__update_and_draw_cards()
         self.__remove_winners()
@@ -287,7 +321,18 @@ class DurakGame:
         Updates te card in each player's hand, and determines which players are out of the game.
         """
         for player in self.__players:
-            player.update_end_round(self.__players[self.__defender].name, self.__table, self.__successfully_defended)
+            player.update_end_round(self.__players[self.__defender].name, self.__prev_table, self.__successfully_defended)
+            if type(player) == LearningPlayer:
+                if not self.__successfully_defended:
+                    if player == self.__players[self.__defender]:
+                        self.__learning_agents_cumulative_rewards[player.name] = -self.__learning_agents_cumulative_rewards[player.name]
+                        for card in self.__prev_table[0]:
+                            self.__learning_agents_cumulative_rewards[player.name] = self.__learning_agents_cumulative_rewards[player.name] - card[0]
+                            if card[1] == self.__trump_rank:
+                                self.__learning_agents_cumulative_rewards[player.name] = self.__learning_agents_cumulative_rewards[player.name] - card[0]
+                    else:
+                        self.__learning_agents_cumulative_rewards[player.name] = -2 * self.__learning_agents_cumulative_rewards[player.name]
+                player.learn(self.__prev_table, Deck.NO_CARD, self.__learning_agents_cumulative_rewards[player.name], self.__table)
             player.take_cards(self.__deck.draw(max(self.HAND_SIZE - player.hand_size, 0)))
             if player.hand_size == 0:
                 self.__out_players.append(player)
@@ -341,7 +386,7 @@ class DurakGame:
     def __get_legal_defending_cards(self) -> List[Deck.CardType]:
         """
         Determines which cards in the defending player's hand (with the addition of Deck>NO_CARD) can be used to defend against the last attacking card.
-        :return:
+        :return: A list of cards from the defender's hand (including Deck.NO_CARD) that can be used for a defence.
         """
         legal_defending_cards = [Deck.NO_CARD]
         attacking_card = self.__table[0][-1]
@@ -373,6 +418,13 @@ class DurakGame:
         :return: The GUI object of the game.
         """
         return self.__gui
+
+    @property
+    def player_names(self):
+        return [player.name for player in self.__constant_order_players]
+
+    def __record_prev_table(self):
+        self.__prev_table = (self.__table[0].copy(), self.__table[1].copy())
 
 
 games = 1
