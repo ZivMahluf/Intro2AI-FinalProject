@@ -1,6 +1,6 @@
 from itertools import product
 import numpy as np
-from typing import NewType, Tuple, List
+from typing import NewType, Tuple, List, Dict
 
 
 class Deck:
@@ -30,6 +30,8 @@ class Deck:
         Constructor.
         """
         self.__deck = list(product(self.VALUES, self.RANKS))
+        self.__indices = {self.__deck[i]: i for i in range(len(self.__deck))}
+        self.__indices[self.NO_CARD] = len(self.__deck)
         self.__current_size = len(self.__deck)
         self.__total_size = len(self.__deck)
         np.random.shuffle(self.__deck)
@@ -73,6 +75,20 @@ class Deck:
         :return: A list of all cards in the deck.
         """
         return self.__deck
+
+    @property
+    def card_indices(self) -> Dict[int, CardType]:
+        """
+        :return: A mapping of cards to indices.
+        """
+        return self.__indices
+
+    @staticmethod
+    def get_full_list_of_cards():
+        """
+        :return: A list of all cards in a deck.
+        """
+        return list(product(Deck.VALUES, Deck.RANKS))
 
     def __str__(self) -> str:
         """
