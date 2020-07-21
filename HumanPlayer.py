@@ -36,6 +36,10 @@ class HumanPlayer(DurakPlayer):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return None
+
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.__game_gui.get_pass_button().collidepoint(event.pos):
+                        return selected_card
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
                         pressed_card = self.__get_clicked_card()

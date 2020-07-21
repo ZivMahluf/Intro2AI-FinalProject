@@ -1,7 +1,8 @@
 import pygame
 import os
 from math import sin, cos, radians
-from DurakPlayer import HumanPlayer, DurakPlayer
+from DurakPlayer import DurakPlayer
+from HumanPlayer import HumanPlayer
 from Deck import Deck
 from typing import List, Union, Tuple
 
@@ -32,6 +33,7 @@ class GUI:
         self.__init_positions(deck)
         self.__font = pygame.font.Font(pygame.font.get_default_font(), self.__size)
         self.__human_player_cards_positions = list()
+        self.__pass_button =  pygame.Rect(550, 680, 150, 50)
 
     def __init_images(self, deck: Deck) -> None:
         """
@@ -91,6 +93,14 @@ class GUI:
         self.__screen.blit(self.__table_image, (0, 0))
         self.__screen.blit(self.__rank_images[trump_rank], (0, 0))
         self.__human_player_cards_positions = list()
+
+        # pass button stuff
+        pygame.draw.rect(self.__screen,[255,255,255],self.__pass_button)
+        text = self.__font.render("Pass",True, (0,0,0))
+        rect = text.get_rect()
+        rect.center = (625,705)
+        self.__screen.blit(text,rect.topleft)
+
         # Shows the players
         for i, position in enumerate(self.__num_players_to_positions[len(players)]):
             # Shows the name of the player
@@ -129,6 +139,14 @@ class GUI:
         # Updates the screen, and waits (the waiting is for people to be able to follow the game)
         pygame.display.flip()
         pygame.time.wait(1000)
+
+    def get_pass_button(self):
+        """getter for pass button
+
+        Returns:
+            pygame rectangle: pass button
+        """
+        return self.__pass_button
 
     def show_message(self, message: str) -> None:
         """
