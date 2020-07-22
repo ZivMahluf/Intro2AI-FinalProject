@@ -21,7 +21,7 @@ class DurakGame:
     HAND_SIZE = 6
     MAX_PLAYERS = 6
 
-    def __init__(self):
+    def __init__(self, render=True, verbose=False):
         """
         Constructor.
         """
@@ -30,8 +30,11 @@ class DurakGame:
         self.__losers = list()
         self.__quit_games = False
         self.__human_player_in_game = False
-        self.__gui = GUI(Deck())
+        self.__gui = GUI(Deck()) if render else None
         self.__learning_agents_cumulative_rewards = {}
+        self.__render = render
+        self.__verbose = verbose
+        self.__round = 0
 
     def add_player(self, player: DurakPlayer) -> None:
         """
@@ -70,7 +73,7 @@ class DurakGame:
         for g in range(num_games):
             if self.__quit_games:
                 break
-            print("Game", g + 1, "of", num_games)
+            print("Game", g + 1, "of", num_games) if self.__verbose else None
             self.__initialize_deck()
             self.__initialize_game_parameters()
             self.__deal_hands()
@@ -79,12 +82,17 @@ class DurakGame:
             for player in self.__players:
                 if type(player) == LearningPlayer:
                     player.first_initialize(self.player_names, self.__deck.total_num_cards)
-            self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
+            if self.__render:
+                self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
+            self.__round = 0
             while self.__playing:
+                self.__round += 1
+                print("round:", self.__round) if self.__verbose else None
                 self.__do_round()
-            self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
+            if self.__render:
+                self.__gui.show_screen(self.__constant_order_players, self.__table, None, None, self.__deck, self.__trump_rank)
             self.__players = self.__players + self.__out_players
-        self.__gui.end()
+        self.__gui.end() if self.__render else None
 
     def __initialize_deck(self) -> None:
         """
@@ -157,7 +165,7 @@ class DurakGame:
         self.__successfully_defended = False
         self.__attacking_limit = min(self.__players[self.__defender].hand_size, self.HAND_SIZE)
         while defending and self.__playing:
-            self.__check_events()
+            self.__check_events() if self.__render else None
             if self.__playing:
                 defending = self.__do_mini_round()
         if self.__playing:
@@ -210,7 +218,7 @@ class DurakGame:
         __players list of the game. If a player attacked, the attacking card and the player's name are returned, otherwise the attacker's name is returned, and
         the attacking card returned is Deck.NO_CARD.
         """
-        if self.__players[self.__attacker].hand_size:
+        if self.__players[self.__attacker].hand_size > 0:
             attacking_card = self.__players[self.__attacker].attack(self.__table, self.__get_legal_attack_cards(self.__players[self.__attacker]))
         else:
             attacking_card = Deck.NO_CARD
@@ -293,7 +301,8 @@ class DurakGame:
                         reward *= 2
                 self.__learning_agents_cumulative_rewards[name] = self.__learning_agents_cumulative_rewards[name] + reward
                 player.learn(self.__prev_table, card, reward, self.__table)
-        self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
+        if self.__render:
+            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
 
     def __end_round(self) -> None:
         """
@@ -316,7 +325,8 @@ class DurakGame:
         self.__defender = len(self.__players) - 1
         if self.MIN_PLAYERS <= len(self.__players):
             self.__update_attacker_defender()
-            self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
+            if self.__render:
+                self.__gui.show_screen(self.__constant_order_players, self.__table, self.__players[self.__attacker], self.__players[self.__defender], self.__deck, self.__trump_rank)
         else:
             self.__end_current_game()
 
@@ -431,11 +441,11 @@ class DurakGame:
         self.__prev_table = (self.__table[0].copy(), self.__table[1].copy())
 
 
-games = 1
-game = DurakGame()
+games = 100
+game = DurakGame(render=False, verbose=True)
 game.add_player(AggressivePlayer(game.HAND_SIZE, "Ziv"))
 game.add_player(BasicPlayer(game.HAND_SIZE, "Idan"))
-game.add_player(HumanPlayer(game.HAND_SIZE, "Vitaly", game.gui))
+game.add_player(RandomPlayer(game.HAND_SIZE, "Vitaly"))
 game.add_player(BasicPlayer(game.HAND_SIZE, "Eyal"))
 game.add_player(RandomPlayer(game.HAND_SIZE, "Yoni"))
 game.add_player(DefensivePlayer(game.HAND_SIZE, "Jeff"))
