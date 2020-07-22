@@ -269,8 +269,6 @@ class DurakGame:
                         self.__players[adding_player].learn(self.__prev_table, card_to_add, 0, self.__table)
                 else:
                     adding_player += 1
-                    if adding_player == self.__defender:
-                        break
                 if len(self.__attacking) == self.__attacking_limit:
                     break
 
