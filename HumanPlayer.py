@@ -71,6 +71,7 @@ class HumanPlayer(DurakPlayer):
                             waiting = False
         if selected_card != Deck.NO_CARD:
             self._hand.remove(selected_card)
+        print(selected_card)
         return selected_card
 
     def __get_clicked_card(self) -> Optional[Deck.CardType]:
@@ -82,12 +83,13 @@ class HumanPlayer(DurakPlayer):
         card_w, card_h = self.__game_gui.card_size
         positions = self.__game_gui.human_player_cards_positions
         pressed_card = Deck.NO_CARD
-        if (positions[0][0] <= mouse_x < (positions[-1][0] + card_w)) and (positions[0][1] <= mouse_y <= (positions[0][1] + card_h)):
-            for i, (x, _) in enumerate(positions):
-                if i < (len(positions) - 1):
-                    if x <= mouse_x < min(x + card_w, positions[i + 1][0]):
-                        pressed_card = self._hand[i]
-                else:
-                    if x <= mouse_x <= (x + card_w):
-                        pressed_card = self._hand[i]
+        if len(positions):
+            if (positions[0][0] <= mouse_x < (positions[-1][0] + card_w)) and (positions[0][1] <= mouse_y <= (positions[0][1] + card_h)):
+                for i, (x, _) in enumerate(positions):
+                    if i < (len(positions) - 1):
+                        if x <= mouse_x < min(x + card_w, positions[i + 1][0]):
+                            pressed_card = self._hand[i]
+                    else:
+                        if x <= mouse_x <= (x + card_w):
+                            pressed_card = self._hand[i]
         return pressed_card
