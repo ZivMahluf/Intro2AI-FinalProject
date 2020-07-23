@@ -1,6 +1,6 @@
 from itertools import product
 import numpy as np
-from typing import NewType, Tuple, List, Dict
+from typing import NewType, Tuple, List
 
 
 class Deck:
@@ -19,48 +19,45 @@ class Deck:
     STRING_RANKS = {HEARTS: "H", CLUBS: "C", DIAMONDS: "D", SPADES: "S"}
     RANKS = [HEARTS, CLUBS, DIAMONDS, SPADES]
     VALUES = [6, 7, 8, 9, 10, JACK, QUEEN, KING, ACE]
-    NO_CARD = 0
+    NO_CARD = (-1, -1)
     """
     Custom card type.
     """
-    CardType = NewType('CardType', Tuple[int, int])
+    CardType = Tuple[int, int]
 
     def __init__(self):
         """
         Constructor.
         """
-        self.__deck = list(product(self.VALUES, self.RANKS))
-        self.__indices = {self.__deck[i]: i for i in range(len(self.__deck))}
-        self.__indices[self.NO_CARD] = len(self.__deck)
-        self.__current_size = len(self.__deck)
+        self.__deck = self.get_full_list_of_cards()
         self.__total_size = len(self.__deck)
-        np.random.shuffle(self.__deck)
 
-    def draw(self, cards: int = 1) -> List[Tuple[int, int]]:
+    def draw(self, cards: int = 1) -> List[CardType]:
         """
         Draws the specified number of cards.
         :param cards: Number of cards to draw.
         :return: A list of all drawn cards (up to the number of remaining cards in the deck).
         """
-        dealt_cards = [self.__deck.pop() for _ in range(min(cards, self.__current_size))]
-        self.__current_size = len(self.__deck)
+        size = len(self.__deck)
+        dealt_cards = [self.__deck.pop() for _ in range(min(cards, size))]
         return dealt_cards
 
-    def put_back(self, card: CardType) -> None:
+    def to_bottom(self, card: CardType) -> None:
         """
-        Puts a card back into the deck and shuffles.
-        :param card: card to put back.
+        Puts the given card to the bottom of the deck.
+        :param card: Card to put to the bottom.
         """
-        if card not in self.__deck:
-            self.__deck.append(card)
-            np.random.shuffle(self.__deck)
+        self.__deck.insert(0, card)
+
+    def shuffle(self):
+        np.random.shuffle(self.__deck)
 
     @property
     def current_num_cards(self) -> int:
         """
         :return: Number of cards remaining in the deck.
         """
-        return self.__current_size
+        return len(self.__deck)
 
     @property
     def total_num_cards(self) -> int:
@@ -75,13 +72,6 @@ class Deck:
         :return: A list of all cards in the deck.
         """
         return self.__deck
-
-    @property
-    def card_indices(self) -> Dict[int, CardType]:
-        """
-        :return: A mapping of cards to indices.
-        """
-        return self.__indices
 
     @staticmethod
     def get_full_list_of_cards():

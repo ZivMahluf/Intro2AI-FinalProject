@@ -1,24 +1,43 @@
 from DurakPlayer import DurakPlayer, Deck, Tuple, List, Optional
 import pygame
+import random
 
 
 class HumanPlayer(DurakPlayer):
 
-    def __init__(self, hand_size: int, name: str, gui):
+    def __init__(self, hand_size: int, name: str):
         """
         Constructor.
         :param hand_size: Number of cards in the initial hand of the player.
         :param name: Name of the player.
-        :param gui: GUI object of the game.
         """
         DurakPlayer.__init__(self, hand_size, name)
+        self.__game_gui = None
+        self.__set_gui = False
+
+    def set_gui(self, gui) -> None:
+        """
+        Sets the gui with which the human player interacts. If the gui is not set, the human player will act like a random player.
+        :param gui: The gui for the human player.
+        """
         self.__game_gui = gui
+        self.__set_gui = True
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
-        return self.__get_card(legal_cards_to_play, "- Attack -")
+        if self.__set_gui:
+            return self.__get_card(legal_cards_to_play, "- Attack -")
+        attacking_card = random.choice(legal_cards_to_play)
+        if attacking_card != Deck.NO_CARD:
+            self._hand.remove(attacking_card)
+        return attacking_card
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
-        return self.__get_card(legal_cards_to_play, "- Defend -")
+        if self.__set_gui:
+            return self.__get_card(legal_cards_to_play, "- Defend -")
+        defending_card = random.choice(legal_cards_to_play)
+        if defending_card != Deck.NO_CARD:
+            self._hand.remove(defending_card)
+        return defending_card
 
     def __get_card(self, legal_cards_to_play: List[Deck.CardType], message: str = "") -> Optional[Deck.CardType]:
         """
@@ -38,7 +57,7 @@ class HumanPlayer(DurakPlayer):
                     return None
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.__game_gui.get_pass_button().collidepoint(event.pos):
+                    if self.__game_gui.get_pass_button().collidepoint(event.pos) and selected_card in legal_cards_to_play:
                         return selected_card
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:

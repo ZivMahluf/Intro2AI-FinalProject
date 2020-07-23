@@ -20,14 +20,19 @@ class BasicPlayer(DurakPlayer):
         :return: The card with the lowest value from the legal cards.
         """
         if len(legal_cards_to_play) == 1:
-            return Deck.NO_CARD
-        lowest_card = legal_cards_to_play[1]
-        for card in legal_cards_to_play[2:]:
-            value, rank = card
-            if (self._trump_rank not in [rank, lowest_card[1]]) or ((rank == self._trump_rank) and (lowest_card[1] == self._trump_rank)):
-                if value < lowest_card[0]:
-                    lowest_card = card
-            elif lowest_card[1] == self._trump_rank:
-                lowest_card = card
-        self._hand.remove(lowest_card)
-        return lowest_card
+            chose_card = legal_cards_to_play[0]
+        else:
+            choose_from = legal_cards_to_play[:]
+            if Deck.NO_CARD in choose_from:
+                choose_from.remove(Deck.NO_CARD)
+            chose_card = choose_from[0]
+            for card in choose_from[1:]:
+                value, rank = card
+                if (self._trump_rank not in [rank, chose_card[1]]) or ((rank == self._trump_rank) and (chose_card[1] == self._trump_rank)):
+                    if value < chose_card[0]:
+                        chose_card = card
+                elif chose_card[1] == self._trump_rank:
+                    chose_card = card
+        if chose_card != Deck.NO_CARD:
+            self._hand.remove(chose_card)
+        return chose_card

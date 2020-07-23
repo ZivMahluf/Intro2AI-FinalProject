@@ -21,7 +21,7 @@ class DurakPlayer:
         Adds the cards to the hand.
         :param cards: A list of cards to add.
         """
-        self._hand = self._hand + cards
+        self._hand.extend(cards)
 
     def set_trump_rank(self, rank: int) -> None:
         """
@@ -71,7 +71,7 @@ class DurakPlayer:
         """
         :return: The value of the lowest card with a trump rank, or Deck.NO_CARD is no card has a trump rank in the hand.
         """
-        min_trump = Deck.NO_CARD
+        min_trump = np.inf
         for value, series in self._hand:
             if series == self._trump_rank:
                 if min_trump == Deck.NO_CARD or value < min_trump:
@@ -184,6 +184,9 @@ class DurakPlayer:
         :param table: Cards on the table at the end of the round (before clearing)
         :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
         """
+        pass
+
+    def set_gui(self, gui):
         pass
 
     @property
