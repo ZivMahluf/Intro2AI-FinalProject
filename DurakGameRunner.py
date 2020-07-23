@@ -196,7 +196,8 @@ class DurakRunner:
             self.do_attack_phase()
             self.do_defence_phase()
         if not self.successful:
-            self.do_scoop_phase()
+            self.do_throw_in_phase()
+        self.update_players_end_of_round()
         self.refill_hands()
         self.remove_winners()
         self.check_end_game()
@@ -246,6 +247,7 @@ class DurakRunner:
             return
         else:
             self.attacking_cards.append(self.attacking_card)
+            self.update_players_attack()
             if self.render:
                 self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
             self.legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_rank)
@@ -255,6 +257,7 @@ class DurakRunner:
                 return
             else:
                 self.defending_cards.append(self.defending_card)
+                self.update_players_defence()
                 if self.render:
                     self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
         if len(self.attacking_cards) == len(self.defending_cards) == self.limit:
@@ -280,10 +283,32 @@ class DurakRunner:
             self.last_attacker_name = player.name
             while self.attacking_card != Deck.NO_CARD and len(self.attacking_cards) < self.limit:
                 self.attacking_cards.append(self.attacking_card)
+                self.update_players_attack()
                 self.legal_attacking_cards.remove(self.attacking_card)
                 self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
                 if self.render:
                     self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+
+    def update_players_attack(self):
+        """
+        Updates every player about an attack done by a player.
+        """
+        for player in self.active_players:
+            player.update_round_progress(self.last_attacker_name, self.attacking_card)
+
+    def update_players_defence(self):
+        """
+        Updates every player about a defending card played by the defending player.
+        """
+        for player in self.active_players:
+            player.update_round_progress(self.active_players[self.defender].name, self.defending_card)
+
+    def update_players_end_of_round(self):
+        """
+        Updates every player about the result of the round.
+        """
+        for player in self.active_players:
+            player.update_end_round(self.active_players[self.defender].name, self.table, self.successful)
 
     def refill_hands(self) -> None:
         """
@@ -337,6 +362,6 @@ class DurakRunner:
 
     def end(self) -> None:
         """
-        Quits the GUI (if exists).
+        Quits the GUI (if one exists).
         """
         self.gui.end() if self.gui is not None else None
