@@ -61,6 +61,7 @@ class DurakRunner:
         self.round_log = list()
         self.game_log = list()
         self.games_log = list()
+        self.quit_all = False
 
     def add_player(self, player: DurakPlayer) -> None:
         """
@@ -71,10 +72,12 @@ class DurakRunner:
         if (type(player) == HumanPlayer and not self.human_player_exists) or (type(player) != HumanPlayer):
             if len(self.players) < self.MAX_PLAYERS:
                 self.first_game = True
-                self.players.append(player)
                 if type(player) == HumanPlayer:
+                    self.players.insert(0, player)
                     self.human_player_exists = True
                     self.render = True
+                else:
+                    self.players.append(player)
 
     def play_games(self, games: int = 1, render: bool = True, verbose: bool = False) -> None:
         """
@@ -88,6 +91,8 @@ class DurakRunner:
         if len(self.players) >= self.MIN_PLAYERS:
             for self.game in range(1, games + 1):
                 self.play_game()
+                if self.quit_all:
+                    break
 
     def play_game(self) -> None:
         """
@@ -99,11 +104,12 @@ class DurakRunner:
         self.round = 1
         if self.render:
             self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
-        while not self.game_over():
+        while not self.game_over() and not self.quit_all:
             self.play_round()
-        self.first_game = False
-        if self.render:
-            self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
+        if not self.quit_all:
+            self.first_game = False
+            if self.render:
+                self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
 
     def initialize_game(self) -> None:
         """
@@ -217,12 +223,13 @@ class DurakRunner:
         while not self.check_quit_from_gui() and self.defending:
             self.do_attack_phase()
             self.do_defence_phase()
-        if not self.successful:
-            self.do_throw_in_phase()
-        self.update_players_end_of_round()
-        self.refill_hands()
-        self.remove_winners()
-        self.check_end_game()
+        if not self.quit_all:
+            if not self.successful:
+                self.do_scoop_phase()
+            self.update_players_end_of_round()
+            self.refill_hands()
+            self.remove_winners()
+            self.check_end_game()
 
     def reset_round_parameters(self) -> None:
         """
@@ -240,7 +247,7 @@ class DurakRunner:
         """
         if self.render:
             if self.gui.pressed_quit():
-                self.active_players = list()
+                self.quit_all = True
                 return True
         return False
 
@@ -300,16 +307,20 @@ class DurakRunner:
         Each player that's not defending has a chance to throw as many cards as allowed for the defender to take.
         """
         for player in self.active_players[:self.defender] + self.active_players[self.defender + 1:]:
-            self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
-            self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
-            self.last_attacker_name = player.name
-            while self.attacking_card != Deck.NO_CARD and len(self.attacking_cards) < self.limit:
-                self.attacking_cards.append(self.attacking_card)
-                self.update_players_attack()
-                self.legal_attacking_cards.remove(self.attacking_card)
+            if len(self.attacking_cards) < self.limit:
+                self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
                 self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
-                if self.render:
-                    self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+                self.last_attacker_name = player.name
+                while self.attacking_card != Deck.NO_CARD:
+                    self.attacking_cards.append(self.attacking_card)
+                    self.update_players_attack()
+                    if self.render:
+                        self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+                    self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
+                    if len(self.attacking_cards) < self.limit:
+                        self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
+                    else:
+                        break
 
     def update_players_attack(self):
         """
