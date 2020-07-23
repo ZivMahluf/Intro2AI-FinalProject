@@ -3,6 +3,7 @@ from HumanPlayer import HumanPlayer
 from GUI import GUI
 from DurakGameLogic import DurakLogic
 from Deck import Deck
+from typing import List, Tuple
 
 
 class DurakRunner:
@@ -11,34 +12,55 @@ class DurakRunner:
     MAX_PLAYERS = 6
     HAND_SIZE = 6
 
+    # A state is (attacking_cards, defending_cards)
+    StateType = Tuple[List[Deck.CardType], List[Deck.CardType]]
+    # A record is a tuple of:
+    # previous state,
+    # action,
+    # player who did the action,
+    # next state,
+    # weather defence was successful (relevant only for states which end the round),
+    # attacker player
+    # defender player
+    RecordType = Tuple[StateType, Deck.CardType, DurakPlayer, StateType, bool, DurakPlayer, DurakPlayer]
+    # A log of a round is a list of records of the round
+    RoundLogType = List[RecordType]
+    # A log of a game is a list of logs of the rounds of the game
+    GameLogType = List[RoundLogType]
+
     def __init__(self):
-        self.players = list()
+        self.gui = None
         self.human_player_exists = False
-        self.render = self.human_player_exists  # if a human player is playing, always render
+        self.render = False
         self.verbose = False
-        self.gui = GUI() if self.render else None
-        self.attacking_cards = list()
-        self.defending_cards = list()
-        self.table = (self.attacking_cards, self.defending_cards)
+        self.first_game = True
         self.attacker = 0
         self.defender = 1
+        self.players = list()
         self.active_players = list()
         self.losers = list()
-        self.first_game = True
         self.deck = Deck()
         self.trump_rank = Deck.HEARTS
         self.game_logic = DurakLogic()
         self.game = 0
         self.round = 0
         self.legal_attacking_cards = list()
-        self.legal_defending_cards = list()
-        self.attacking_card = Deck.NO_CARD
-        self.defending_card = Deck.NO_CARD
         self.last_attacker_name = ""
-        self.attacking_player = None
-        self.successful = False
         self.defending = False
         self.limit = 0
+        self.attacking_cards = list()
+        self.defending_cards = list()
+        self.table = (self.attacking_cards, self.defending_cards)
+        self.attacking_card = Deck.NO_CARD
+        self.defending_card = Deck.NO_CARD
+        self.successful = False
+        self.attacking_player = None
+        self.defending_player = None
+        self.prev_state = tuple()
+        self.record = tuple()
+        self.round_log = list()
+        self.game_log = list()
+        self.games_log = list()
 
     def add_player(self, player: DurakPlayer) -> None:
         """
@@ -250,8 +272,8 @@ class DurakRunner:
             self.update_players_attack()
             if self.render:
                 self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
-            self.legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_rank)
-            self.defending_card = self.active_players[self.defender].defend(self.table, self.legal_defending_cards)
+            legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_rank)
+            self.defending_card = self.active_players[self.defender].defend(self.table, legal_defending_cards)
             if self.defending_card == Deck.NO_CARD:
                 self.defending = False
                 return
@@ -365,3 +387,9 @@ class DurakRunner:
         Quits the GUI (if one exists).
         """
         self.gui.end() if self.gui is not None else None
+
+    def get_games_log(self) -> List[GameLogType]:
+        """
+        :return: Log of the games played during the last call to the play_games method.
+        """
+        return self.games_log
