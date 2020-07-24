@@ -3,12 +3,9 @@ import random
 
 
 class LearningPlayer(DurakPlayer):
-    def __init__(self, hand_size: int, name: str):
-        DurakPlayer.__init__(self, hand_size, name)
-        self.initialized = False
 
     def first_initialize(self) -> None:
-        self.initialized = True
+        raise NotImplementedError()
 
     def initialize_for_game(self) -> None:
         raise NotImplementedError()
