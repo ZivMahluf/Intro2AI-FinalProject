@@ -89,6 +89,8 @@ class DurakRunner:
         :param render: Weather of not to render the game (if a HumanPlayer participates, the games will be rendered regardless).
         :param verbose: Weather to print a progress of the game.
         """
+        for player in self.players:
+            player.first_initialize()
         self.render = render or self.human_player_exists
         self.verbose = verbose
         self.games_log = list()  # resetting the games log
@@ -144,6 +146,7 @@ class DurakRunner:
         self.active_players = self.players[:]
         for player in self.active_players:
             player.set_gui(self.gui)
+            player.initialize_for_game()
         deal = True
         while deal:
             self.initialize_deck()
