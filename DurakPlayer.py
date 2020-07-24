@@ -214,4 +214,4 @@ class DurakPlayer:
         """
         :return: String representation of the player (as a string representation of the hand)
         """
-        return str(self._hand)
+        return "(" + self.__name + ", " + str(self._hand) + ")"
