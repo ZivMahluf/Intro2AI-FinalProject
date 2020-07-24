@@ -14,15 +14,17 @@ class DurakRunner:
 
     # A state is (attacking_cards, defending_cards)
     StateType = Tuple[List[Deck.CardType], List[Deck.CardType]]
+    # Player representation will be done with a tuple (name, hand)
+    PlayerRecordType = Tuple[str, List[Deck.CardType]]
     # A record is a tuple of:
     # previous state,
     # action,
-    # player who did the action,
+    # player who did the action (player record type),
     # next state,
     # weather defence was successful (relevant only for states which end the round),
-    # attacker player
-    # defender player
-    RecordType = Tuple[StateType, Deck.CardType, DurakPlayer, StateType, bool, DurakPlayer, DurakPlayer]
+    # attacker player (player record type)
+    # defender player (player record type)
+    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, bool, PlayerRecordType, PlayerRecordType]
     # A log of a round is a list of records of the round
     RoundLogType = List[RecordType]
     # A log of a game is a list of logs of the rounds of the game
@@ -53,11 +55,11 @@ class DurakRunner:
         self.table = (self.attacking_cards, self.defending_cards)
         self.attacking_card = Deck.NO_CARD
         self.defending_card = Deck.NO_CARD
+        self.last_action = Deck.NO_CARD
+        self.last_player = None
         self.successful = False
         self.attacking_player = None
-        self.defending_player = None
         self.prev_state = tuple()
-        self.record = tuple()
         self.round_log = list()
         self.game_log = list()
         self.games_log = list()
@@ -88,16 +90,21 @@ class DurakRunner:
         """
         self.render = render or self.human_player_exists
         self.verbose = verbose
+        self.games_log = list()  # resetting the games log
         if len(self.players) >= self.MIN_PLAYERS:
             for self.game in range(1, games + 1):
                 self.play_game()
                 if self.quit_all:
                     break
+                self.add_game_log_to_games_log()
+        if self.verbose:
+            print("Done!")
 
     def play_game(self) -> None:
         """
         Plays a single full game.
         """
+        self.game_log = list()  # resetting the game log
         if self.verbose:
             print('---------------------', 'game', self.game, '---------------------')
         self.initialize_game()
@@ -106,6 +113,7 @@ class DurakRunner:
             self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
         while not self.game_over() and not self.quit_all:
             self.play_round()
+            self.add_round_log_to_game_log()
         if not self.quit_all:
             self.first_game = False
             if self.render:
@@ -240,6 +248,7 @@ class DurakRunner:
         self.successful = False
         self.defending = True
         self.limit = min(self.HAND_SIZE, self.active_players[self.defender].hand_size)
+        self.round_log = list()
 
     def check_quit_from_gui(self) -> bool:
         """
@@ -258,34 +267,44 @@ class DurakRunner:
         self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(self.active_players[self.attacker].hand, self.table)
         self.attacking_card = self.active_players[self.attacker].attack(self.table, self.legal_attacking_cards)
         self.last_attacker_name = self.active_players[self.attacker].name
+        self.last_player = self.active_players[self.attacker]
+        self.last_action = self.attacking_card
         if self.attacking_card == Deck.NO_CARD:
             for player in self.active_players[self.defender + 1:]:
                 self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
                 self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
                 self.last_attacker_name = player.name
+                self.last_player = player
+                self.last_action = self.attacking_card
                 if self.attacking_card != Deck.NO_CARD:
-                    return
+                    break
+        if self.attacking_card == Deck.NO_CARD:
+            self.successful = True
+            self.defending = False
+        else:
+            self.record_current_state()
+            self.attacking_cards.append(self.attacking_card)
+            self.add_record_to_round_log()
+            self.update_players_attack()
+            if self.render:
+                self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
 
     def do_defence_phase(self) -> None:
         """
         The defending player defends as needed from the last attacking card.
         """
-        if self.attacking_card == Deck.NO_CARD:
-            self.successful = True
-            self.defending = False
-            return
-        else:
-            self.attacking_cards.append(self.attacking_card)
-            self.update_players_attack()
-            if self.render:
-                self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+        if self.defending:
             legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_rank)
             self.defending_card = self.active_players[self.defender].defend(self.table, legal_defending_cards)
+            self.last_player = self.active_players[self.defender]
+            self.last_action = self.defending_card
             if self.defending_card == Deck.NO_CARD:
                 self.defending = False
                 return
             else:
+                self.record_current_state()
                 self.defending_cards.append(self.defending_card)
+                self.add_record_to_round_log()
                 self.update_players_defence()
                 if self.render:
                     self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
@@ -311,14 +330,19 @@ class DurakRunner:
                 self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
                 self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
                 self.last_attacker_name = player.name
+                self.last_player = player
+                self.last_action = self.attacking_card
                 while self.attacking_card != Deck.NO_CARD:
+                    self.record_current_state()
                     self.attacking_cards.append(self.attacking_card)
+                    self.add_record_to_round_log()
                     self.update_players_attack()
                     if self.render:
                         self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
                     self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
                     if len(self.attacking_cards) < self.limit:
                         self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
+                        self.last_action = self.attacking_card
                     else:
                         break
 
@@ -398,6 +422,36 @@ class DurakRunner:
         Quits the GUI (if one exists).
         """
         self.gui.end() if self.gui is not None else None
+
+    def record_current_state(self) -> None:
+        """
+        Records the current state of the game (cards on the table).
+        """
+        self.prev_state = (self.attacking_cards[:], self.defending_cards[:])
+
+    def add_record_to_round_log(self) -> None:
+        """
+        Creates a new record tuple and adds it to the log of the current round.
+        """
+        successful = True if self.successful else False
+        new_record = ((self.prev_state[0][:], self.prev_state[1][:]), (self.last_action[0], self.last_action[1]),
+                      (self.last_player.name[:], self.last_player.hand[:]),
+                      (self.table[0][:], self.table[1][:]), successful,
+                      (self.active_players[self.attacker].name[:], self.active_players[self.attacker].hand[:]),
+                      (self.active_players[self.defender].name[:], self.active_players[self.defender].hand[:]))
+        self.round_log.append(new_record)
+
+    def add_round_log_to_game_log(self) -> None:
+        """
+        Adds the log of the current round to the log of the current game.
+        """
+        self.game_log.append(self.round_log[:])
+
+    def add_game_log_to_games_log(self) -> None:
+        """
+        Adds the log of the current game to the log of all games recorded.
+        """
+        self.games_log.append(self.game_log[:])
 
     def get_games_log(self) -> List[GameLogType]:
         """
