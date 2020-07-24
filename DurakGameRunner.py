@@ -21,9 +21,11 @@ class DurakRunner:
     # action,
     # player who did the action (player record type),
     # next state,
-    # attacker player (player record type)
-    # defender player (player record type)
-    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, PlayerRecordType, PlayerRecordType]
+    # attacker player (as a name)
+    # defender player (as a name)
+    # the cards in the deck
+    # the cards in all players' hands
+    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, str, str, List[Deck.CardType], List[List[Deck.CardType]]]
     # A log of a round is a list of records of the round
     RoundLogType = List[RecordType]
     # A log of a game is a list of logs of the rounds of the game
@@ -435,8 +437,9 @@ class DurakRunner:
         new_record = ((self.prev_state[0][:], self.prev_state[1][:]), (self.last_action[0], self.last_action[1]),
                       (self.last_player.name[:], self.last_player.hand[:]),
                       (self.table[0][:], self.table[1][:]),
-                      (self.active_players[self.attacker].name[:], self.active_players[self.attacker].hand[:]),
-                      (self.active_players[self.defender].name[:], self.active_players[self.defender].hand[:]))
+                      self.active_players[self.attacker].name[:],
+                      self.active_players[self.defender].name[:],
+                      self.deck.cards[:], [player.hand[:] for player in self.players])
         self.round_log.append(new_record)
 
     def add_round_log_to_game_log(self) -> None:
