@@ -189,6 +189,12 @@ class DurakPlayer:
     def set_gui(self, gui):
         pass
 
+    def first_initialize(self) -> None:
+        pass
+
+    def initialize_for_game(self) -> None:
+        pass
+
     @property
     def hand_size(self) -> int:
         """
