@@ -21,10 +21,9 @@ class DurakRunner:
     # action,
     # player who did the action (player record type),
     # next state,
-    # weather defence was successful (relevant only for states which end the round),
     # attacker player (player record type)
     # defender player (player record type)
-    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, bool, PlayerRecordType, PlayerRecordType]
+    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, PlayerRecordType, PlayerRecordType]
     # A log of a round is a list of records of the round
     RoundLogType = List[RecordType]
     # A log of a game is a list of logs of the rounds of the game
@@ -433,10 +432,9 @@ class DurakRunner:
         """
         Creates a new record tuple and adds it to the log of the current round.
         """
-        successful = True if self.successful else False
         new_record = ((self.prev_state[0][:], self.prev_state[1][:]), (self.last_action[0], self.last_action[1]),
                       (self.last_player.name[:], self.last_player.hand[:]),
-                      (self.table[0][:], self.table[1][:]), successful,
+                      (self.table[0][:], self.table[1][:]),
                       (self.active_players[self.attacker].name[:], self.active_players[self.attacker].hand[:]),
                       (self.active_players[self.defender].name[:], self.active_players[self.defender].hand[:]))
         self.round_log.append(new_record)
