@@ -4,12 +4,6 @@ import random
 
 class LearningPlayer(DurakPlayer):
 
-    def first_initialize(self) -> None:
-        raise NotImplementedError()
-
-    def initialize_for_game(self) -> None:
-        raise NotImplementedError()
-
     def learn(self, prev_table: Tuple[List[Deck.CardType], List[Deck.CardType]], prev_action: Deck.CardType,
               reward: float, next_table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> None:
         raise NotImplementedError()
