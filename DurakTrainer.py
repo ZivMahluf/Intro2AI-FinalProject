@@ -44,7 +44,8 @@ class DurakTrainer:
                     # The following information can reconstruct a full game state (including a memory of an all-knowing player regarding the cards in the game),
                     # and calculate an accurate reward for each action.
                     prev_state, prev_action, acting_player_name, next_state, attacker_name, defender_name, cards_in_deck, player_hands = record
-                    print("successfully got information from record")
+                    print("successfully got information from record")  # TODO: complete
+
                     break
                 break
             break
