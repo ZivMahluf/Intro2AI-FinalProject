@@ -17,6 +17,7 @@ class DurakTrainer:
         self.training_data_per_player = dict()
         self.update_args_by_game = list()
         self.verbose = False
+        self.win_ratios = dict()
 
     def add_auto_agent(self, playerClass, name: str):
         player = playerClass(self.game_runner.HAND_SIZE, name)
@@ -24,20 +25,24 @@ class DurakTrainer:
             if isinstance(player, LearningPlayer):
                 self.learning_agents.append(player)
                 self.training_data_per_player[name] = list()
+                self.win_ratios[name] = list()
             else:
                 self.other_agents.append(player)
             self.game_runner.add_player(player)
 
-    def train_agents(self, episodes: int = 1, games_per_episode: int = 1, render: bool = False, verbose: bool = False):
+    def train_agents(self, episodes: int = 1, games_per_episode: int = 1, render: bool = False, verbose: bool = False, test_games_per_episode: int = 100):
         self.verbose = verbose
         for episode in range(1, episodes + 1):
             self.update_args_by_game = list()
             for player_name in self.training_data_per_player:
                 self.training_data_per_player[player_name] = list()
+            print("-------------------- Episode", episode, '--------------------')
             if verbose:
-                print("-------------------- Episode", episode, '--------------------')
-                print("----------------- Running Games -----------------")
+                print("----------------- Running Training Games -----------------")
             self.game_runner.play_games(games_per_episode, render, False)
+            if self.verbose:
+                print('------------- Testing Learning Agents -------------')
+            self.test_agents(test_games_per_episode, render, verbose)
             if verbose:
                 print("-------------- Analyzing Game Logs --------------")
             self.construct_learning_data()
@@ -159,8 +164,23 @@ class DurakTrainer:
                 if end:
                     break
 
+    def test_agents(self, games, render, verbose):
+        self.game_runner.play_games(games, render, verbose)
+        losers = self.game_runner.get_losers()
+        for player in self.learning_agents:
+            losing_ratio = sum([1 for loser in losers if loser is not None and loser.name == player.name]) / len(losers)
+            self.win_ratios[player.name].append(1 - losing_ratio)
+
+    def print_win_progress(self):
+        for player in self.learning_agents:
+            print('Player Name:', player.name)
+            for i, win_ratio in enumerate(self.win_ratios[player.name]):
+                print('Episode ' + str(i + 1) + ":", str(win_ratio * 100) + "%")
+            print()
+
 
 trainer = DurakTrainer()
-trainer.add_auto_agent(SanityCheckPlayer, 'SanityCheck')
-trainer.add_auto_agent(BasicPlayer, 'BasicBitch')
-trainer.train_agents(5000, 10, verbose=True)
+trainer.add_auto_agent(RandomPlayer, 'RandomPlayer')
+trainer.add_auto_agent(SanityCheckPlayer, "SanityCheckPlayer")
+trainer.train_agents(50, 15, test_games_per_episode=20)
+trainer.print_win_progress()
