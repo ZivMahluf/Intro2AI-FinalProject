@@ -1,4 +1,5 @@
 from DurakPlayer import DurakPlayer, Deck, Tuple, List, Optional
+from typing import Union
 import random
 
 
@@ -8,8 +9,7 @@ class LearningPlayer(DurakPlayer):
               reward: float, next_table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> None:
         raise NotImplementedError()
 
-    def batch_learn(self, prev_states: List[Tuple[List[Deck.CardType], List[Deck.CardType]]], prev_actions: List[Deck.CardType],
-                    rewards: List[float], next_states: List[Tuple[List[Deck.CardType], List[Deck.CardType]]]):
+    def batch_learn(self, batch: List[Tuple[Tuple[List[Deck.CardType], List[Deck.CardType]], Deck.CardType, Union[int, float], Tuple[List[Deck.CardType], List[Deck.CardType]]]]):
         raise NotImplementedError()
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
