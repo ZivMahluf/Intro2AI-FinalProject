@@ -14,18 +14,19 @@ class DurakRunner:
 
     # A state is (attacking_cards, defending_cards)
     StateType = Tuple[List[Deck.CardType], List[Deck.CardType]]
-    # Player representation will be done with a tuple (name, hand)
+    # Acting player representation will be done with a tuple (name, hand)
     PlayerRecordType = Tuple[str, List[Deck.CardType]]
     # A record is a tuple of:
     # previous state,
     # action,
-    # player who did the action (player record type),
+    # acting player,
     # next state,
     # attacker player (as a name)
     # defender player (as a name)
     # the cards in the deck
     # the cards in all players' hands
-    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, str, str, List[Deck.CardType], List[List[Deck.CardType]]]
+    # the trump rank of the game
+    RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, str, str, List[Deck.CardType], List[List[Deck.CardType]], int]
     # A log of a round is a list of records of the round
     RoundLogType = List[RecordType]
     # A log of a game is a list of logs of the rounds of the game
@@ -89,8 +90,9 @@ class DurakRunner:
         :param render: Weather of not to render the game (if a HumanPlayer participates, the games will be rendered regardless).
         :param verbose: Weather to print a progress of the game.
         """
+        names = [player.name for player in self.players]
         for player in self.players:
-            player.first_initialize()
+            player.first_initialize(names, self.deck.total_num_cards)
         self.render = render or self.human_player_exists
         self.verbose = verbose
         self.games_log = list()  # resetting the games log
@@ -228,7 +230,6 @@ class DurakRunner:
         """
         if self.verbose:
             print('round', self.round, '(game ' + str(self.game) + ')')
-            self.round += 1
         self.reset_round_parameters()
         if self.render:
             self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
@@ -242,6 +243,7 @@ class DurakRunner:
             self.refill_hands()
             self.remove_winners()
             self.check_end_game()
+            self.round += 1
 
     def reset_round_parameters(self) -> None:
         """
@@ -355,14 +357,14 @@ class DurakRunner:
         Updates every player about an attack done by a player.
         """
         for player in self.active_players:
-            player.update_round_progress(self.last_attacker_name, self.attacking_card)
+            player.update_round_progress(self.last_attacker_name, self.attacking_card, True)
 
     def update_players_defence(self):
         """
         Updates every player about a defending card played by the defending player.
         """
         for player in self.active_players:
-            player.update_round_progress(self.active_players[self.defender].name, self.defending_card)
+            player.update_round_progress(self.active_players[self.defender].name, self.defending_card, False)
 
     def update_players_end_of_round(self):
         """
@@ -442,7 +444,7 @@ class DurakRunner:
                       (self.table[0][:], self.table[1][:]),
                       self.active_players[self.attacker].name[:],
                       self.active_players[self.defender].name[:],
-                      self.deck.cards[:], [player.hand[:] for player in self.players])
+                      self.deck.cards[:], [player.hand[:] for player in self.players], self.trump_rank)
         self.round_log.append(new_record)
 
     def add_round_log_to_game_log(self) -> None:
@@ -462,3 +464,9 @@ class DurakRunner:
         :return: Log of the games played during the last call to the play_games method.
         """
         return self.games_log
+
+    def get_players(self):
+        """
+        :return: A list of the players in the game runner.
+        """
+        return self.players
