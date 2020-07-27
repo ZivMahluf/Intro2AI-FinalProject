@@ -3,7 +3,7 @@ from HumanPlayer import HumanPlayer
 from GUI import GUI
 from DurakGameLogic import DurakLogic
 from Deck import Deck
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 
 class DurakRunner:
@@ -96,6 +96,8 @@ class DurakRunner:
         self.render = render or self.human_player_exists
         self.verbose = verbose
         self.games_log = list()  # resetting the games log
+        self.losers = list()
+        self.first_game = True
         if len(self.players) >= self.MIN_PLAYERS:
             for self.game in range(1, games + 1):
                 self.play_game()
@@ -465,8 +467,14 @@ class DurakRunner:
         """
         return self.games_log
 
-    def get_players(self):
+    def get_players(self) -> List[DurakPlayer]:
         """
         :return: A list of the players in the game runner.
         """
         return self.players
+
+    def get_losers(self) -> List[Union[None, DurakPlayer]]:
+        """
+        :return: Losers of the games played in the last call to play_games.
+        """
+        return self.losers
