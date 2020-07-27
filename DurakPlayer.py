@@ -168,11 +168,12 @@ class DurakPlayer:
             self._hand.remove(highest_card)
             return highest_card
 
-    def update_round_progress(self, player_name: str, played_card: Deck.CardType) -> None:
+    def update_round_progress(self, player_name: str, played_card: Deck.CardType, attack: bool) -> None:
         """
         Updates the agent about a card that was played by a player.
         :param player_name: Name of the player that played.
         :param played_card: The card played by that player.
+        :param attack: Weather the card was played as part of an attack.
         """
         pass
 
@@ -189,7 +190,7 @@ class DurakPlayer:
     def set_gui(self, gui):
         pass
 
-    def first_initialize(self) -> None:
+    def first_initialize(self, players_names, full_deck_size) -> None:
         pass
 
     def initialize_for_game(self) -> None:
