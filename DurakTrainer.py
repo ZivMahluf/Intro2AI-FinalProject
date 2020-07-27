@@ -58,10 +58,9 @@ class DurakTrainer:
                     # and calculate an accurate reward for each action.
                     prev_state, prev_action, acting_player_name_hand, next_state, attacker_name, defender_name, cards_in_deck, player_hands, trump_rank = record
                     acting_player_name, acting_player_hand = acting_player_name_hand
+                    update_args.append((acting_player_name, prev_action, prev_action == next_state[0][-1]))
                     if i == (len(round_log) - 1):
                         update_args.append((defender_name, next_state, len(next_state[0]) == len(next_state[1])))
-                    else:
-                        update_args.append((acting_player_name, prev_action, prev_action == next_state[0][-1]))
                     if acting_player_name in self.training_data_per_player:
                         next_next_state = (list(), list()) if i == (len(round_log) - 1) else round_log[i + 1]
                         reward = self.calculate_reward(len(round_log), i, prev_action, len(acting_player_hand), next_state, len(cards_in_deck), trump_rank, next_next_state)
