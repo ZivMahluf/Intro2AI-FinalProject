@@ -71,7 +71,6 @@ class HumanPlayer(DurakPlayer):
                             waiting = False
         if selected_card != Deck.NO_CARD:
             self._hand.remove(selected_card)
-        print(selected_card)
         return selected_card
 
     def __get_clicked_card(self) -> Optional[Deck.CardType]:
