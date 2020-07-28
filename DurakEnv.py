@@ -254,6 +254,9 @@ class DurakEnv:
                             self.legal_defending_cards.append(card)
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
 
+    def dispose_events(self):
+        self.gui.dispose_events()
+
     def check_end_round(self):
         if not self.defending:
             if self.turn_player == self.active_players[self.defender]:
@@ -294,9 +297,10 @@ class DurakEnv:
 
 # proper running of a durak game from the environment:
 num_games = 100
-game = DurakEnv([BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player 1"), BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player 2"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
+game = DurakEnv([BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), HumanPlayer(DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
 for game_index in range(num_games):
     state = game.reset()
+    game.render()
     while True:
         turn_player = game.get_turn_player()
         to_attack = game.to_attack()
