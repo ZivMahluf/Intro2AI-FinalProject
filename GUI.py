@@ -108,8 +108,6 @@ class GUI:
                 text = self.__font.render(players[i].name, True, (255, 0, 0))
             elif players[i] == defender:
                 text = self.__font.render(players[i].name, True, (0, 0, 255))
-            elif i == 0:
-                text = self.__font.render(players[i].name, True, (255, 255, 255))
             else:
                 text = self.__font.render(players[i].name, True, (0, 0, 0))
             rect = text.get_rect()
