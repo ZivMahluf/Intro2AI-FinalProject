@@ -2,6 +2,8 @@ from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
 from RandomPlayer import RandomPlayer
 from BasicPlayer import BasicPlayer
+from LearningPlayer import LearningPlayer
+from NFSPPlayer import NFSPPlayer
 from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
@@ -21,7 +23,8 @@ class DurakEnv:
     def __init__(self, players: List[DurakPlayer], render=False):
         # non-changing parameters:
         self.players = players
-        self.to_render = render or (True in [isinstance(player, HumanPlayer) for player in players])
+        self.to_render = render or (
+            True in [isinstance(player, HumanPlayer) for player in players])
         self.attacker = 0
         self.defender = 1
         # changing parameters (will be re-initialized upon calling the reset method):
@@ -33,7 +36,8 @@ class DurakEnv:
         self.defending_cards = list()
         self.legal_attacking_cards = list()
         self.legal_defending_cards = list()
-        self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
+        self.state = (self.attacking_cards, self.defending_cards,
+                      self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
         self.trump_rank = self.deck.HEARTS
@@ -61,7 +65,8 @@ class DurakEnv:
         self.defending_cards = list()
         self.legal_attacking_cards = list()
         self.legal_defending_cards = list()
-        self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
+        self.state = (self.attacking_cards, self.defending_cards,
+                      self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
         self.trump_rank = self.deck.HEARTS
@@ -143,7 +148,8 @@ class DurakEnv:
         if self.last_action != self.deck.NO_CARD:
             self.attacking_cards.append(self.last_action)
             for player in self.active_players:
-                player.update_round_progress(self.turn_player.name, self.last_action, True)
+                player.update_round_progress(
+                    self.turn_player.name, self.last_action, True)
             self.attack_phase = False
             if self.turn_player.hand_size == 0:
                 self.reward = 30
@@ -154,12 +160,15 @@ class DurakEnv:
                 self.reset_attacker = True
             else:
                 self.reset_attacker = False
-                self.turn_player = self.active_players[self.active_players.index(self.turn_player) + 1]
+                self.turn_player = self.active_players[self.active_players.index(
+                    self.turn_player) + 1]
                 if self.turn_player == self.active_players[self.defender]:
                     if self.turn_player != self.active_players[-1]:
-                        self.turn_player = self.active_players[self.active_players.index(self.turn_player) + 1]
+                        self.turn_player = self.active_players[self.active_players.index(
+                            self.turn_player) + 1]
                     else:
-                        self.turn_player = self.active_players[self.active_players.index(self.turn_player) - 1]
+                        self.turn_player = self.active_players[self.active_players.index(
+                            self.turn_player) - 1]
                         self.defending = False
                         self.successful = True
                         self.reset_attacker = True
@@ -168,7 +177,8 @@ class DurakEnv:
         if self.last_action != self.deck.NO_CARD:
             self.defending_cards.append(self.last_action)
             for player in self.active_players:
-                player.update_round_progress(self.active_players[self.defender].name, self.last_action, False)
+                player.update_round_progress(
+                    self.active_players[self.defender].name, self.last_action, False)
             self.attack_phase = True
             if len(self.attacking_cards) == len(self.defending_cards) == self.limit:
                 # successful defence
@@ -183,9 +193,11 @@ class DurakEnv:
 
     def update_players_hands(self):
         for player in self.active_players[:self.defender] + self.active_players[self.defender + 1:]:
-            drawn_cards = self.deck.draw(max(0, self.HAND_SIZE - player.hand_size))
+            drawn_cards = self.deck.draw(
+                max(0, self.HAND_SIZE - player.hand_size))
             player.take_cards(drawn_cards)
-        drawn_cards = self.deck.draw(max(0, self.HAND_SIZE - self.active_players[self.defender].hand_size))
+        drawn_cards = self.deck.draw(
+            max(0, self.HAND_SIZE - self.active_players[self.defender].hand_size))
         self.active_players[self.defender].take_cards(drawn_cards)
 
     def remove_winners(self):
@@ -217,12 +229,14 @@ class DurakEnv:
         self.defending_cards = list()
         self.legal_attacking_cards = list()
         self.legal_defending_cards = list()
-        self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
+        self.state = (self.attacking_cards, self.defending_cards,
+                      self.legal_attacking_cards, self.legal_defending_cards)
         self.turn_player = self.active_players[self.attacker]
         self.attacking_player = self.active_players[self.attacker]
         self.defending = True
         self.successful = False
-        self.limit = min(self.HAND_SIZE, self.active_players[self.defender].hand_size)
+        self.limit = min(
+            self.HAND_SIZE, self.active_players[self.defender].hand_size)
         self.attack_phase = True
         self.reset_attacker = True
         self.reset_round = False
@@ -252,7 +266,8 @@ class DurakEnv:
                         if (card[1] == self.attacking_cards[-1][1] and card[0] > self.attacking_cards[-1][0]) or \
                                 ((card[1] == self.trump_rank) and (self.attacking_cards[-1][1] != self.trump_rank)):
                             self.legal_defending_cards.append(card)
-        self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
+        self.state = (self.attacking_cards, self.defending_cards,
+                      self.legal_attacking_cards, self.legal_defending_cards)
 
     def dispose_events(self):
         self.gui.dispose_events()
@@ -263,7 +278,8 @@ class DurakEnv:
                 if self.successful:
                     self.reward = len(self.defending_cards)
                 else:
-                    self.reward = -(len(self.attacking_cards) + len(self.defending_cards))
+                    self.reward = -(len(self.attacking_cards) +
+                                    len(self.defending_cards))
             self.reset_round = True
         else:
             if self.attack_phase and self.reset_attacker:
@@ -273,8 +289,10 @@ class DurakEnv:
 
     def render(self):
         if self.to_render and self.gui is not None:
-            attacker = self.active_players[self.attacker] if len(self.active_players) else None
-            defender = self.active_players[self.defender] if len(self.active_players) >= self.MIN_PLAYERS else None
+            attacker = self.active_players[self.attacker] if len(
+                self.active_players) else None
+            defender = self.active_players[self.defender] if len(
+                self.active_players) >= self.MIN_PLAYERS else None
             self.gui.show_screen(self.players, (self.attacking_cards, self.defending_cards),
                                  attacker, defender,
                                  self.deck, self.trump_rank)
@@ -297,7 +315,8 @@ class DurakEnv:
 
 # proper running of a durak game from the environment:
 num_games = 100
-game = DurakEnv([BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), HumanPlayer(DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
+game = DurakEnv([NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player"), HumanPlayer(
+    DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
 for game_index in range(num_games):
     state = game.reset()
     game.render()
@@ -306,6 +325,8 @@ for game_index in range(num_games):
         to_attack = game.to_attack()
         act = turn_player.get_action(state, to_attack)
         new_state, reward, done, info = game.step(act)
+        if isinstance(turn_player, LearningPlayer):
+            turn_player.learn_step(state, new_state, reward, info)
         state = new_state
         game.render()
         if done:
