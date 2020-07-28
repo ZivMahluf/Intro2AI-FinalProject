@@ -14,10 +14,11 @@ class DurakTrainer:
         self.learning_agents = list()
         self.other_agents = list()
         self.game_runner = DurakRunner()
-        self.training_data_per_player = dict()
         self.update_args_by_game = list()
+        self.training_data_per_player = dict()
+        self.win_ratios_by_episode = dict()
+        self.hands_by_record_per_game = dict()
         self.verbose = False
-        self.win_ratios = dict()
 
     def add_auto_agent(self, playerClass, name: str):
         player = playerClass(self.game_runner.HAND_SIZE, name)
@@ -25,7 +26,8 @@ class DurakTrainer:
             if isinstance(player, LearningPlayer):
                 self.learning_agents.append(player)
                 self.training_data_per_player[name] = list()
-                self.win_ratios[name] = list()
+                self.win_ratios_by_episode[name] = list()
+                self.hands_by_record_per_game[name] = list()
             else:
                 self.other_agents.append(player)
             self.game_runner.add_player(player)
@@ -34,43 +36,56 @@ class DurakTrainer:
         self.verbose = verbose
         for episode in range(1, episodes + 1):
             self.update_args_by_game = list()
-            for player_name in self.training_data_per_player:
-                self.training_data_per_player[player_name] = list()
+            for player in self.learning_agents:
+                self.training_data_per_player[player.name] = list()
+                self.hands_by_record_per_game[player.name] = list()
             print("-------------------- Episode", episode, '--------------------')
             if verbose:
                 print("----------------- Running Training Games -----------------")
-            self.game_runner.play_games(games_per_episode, render, False)
-            if self.verbose:
-                print('------------- Testing Learning Agents -------------')
-            self.test_agents(test_games_per_episode, render, verbose)
+            self.game_runner.play_games(games_per_episode, render, verbose)
             if verbose:
                 print("-------------- Analyzing Game Logs --------------")
             self.construct_learning_data()
             self.do_training()
+            if self.verbose:
+                print('------------- Testing Learning Agents -------------')
+            self.test_agents(test_games_per_episode, render, verbose)
 
     def construct_learning_data(self):
         """
         Uses the logs of the games to construct learning data for the learning agents.
         """
         games_log = self.game_runner.get_games_log()
+        all_players = self.game_runner.get_players()
         for g, game_log in enumerate(games_log):
             if self.verbose:
                 print('analyzing log of game', g + 1)
             update_args = list()
-            for round_log in game_log:
+            hands_per_game = dict()
+            for j, round_log in enumerate(game_log):
                 for i, record in enumerate(round_log):
-                    # The following information can reconstruct a full game state (including a memory of an all-knowing player regarding the cards in the game),
-                    # and calculate an accurate reward for each action.
                     prev_state, prev_action, acting_player_name_hand, next_state, attacker_name, defender_name, cards_in_deck, player_hands, trump_rank = record
+                    # recording the cards in the hands of the learning agents during each round
+                    for k, player in enumerate(all_players):
+                        if player.name in self.hands_by_record_per_game:
+                            if player.name not in hands_per_game:
+                                hands_per_game[player.name] = list()
+                            hands_per_game[player.name].append(player_hands[k])
                     acting_player_name, acting_player_hand = acting_player_name_hand
+                    # recording the arguments for the update methods for the round
                     update_args.append((acting_player_name, prev_action, prev_action == next_state[0][-1]))
                     if i == (len(round_log) - 1):
                         update_args.append((defender_name, next_state, len(next_state[0]) == len(next_state[1])))
+                    # creating a tuple of (state, action, reward, next_state) if the acting player is a learning agent
                     if acting_player_name in self.training_data_per_player:
                         next_next_state = (list(), list()) if i == (len(round_log) - 1) else round_log[i + 1]
                         reward = self.calculate_reward(len(round_log), i, prev_action, len(acting_player_hand), next_state, len(cards_in_deck), trump_rank, next_next_state)
                         self.training_data_per_player[acting_player_name].append((prev_state, prev_action, reward, next_state))
+            # adding the update arguments of the game to the record for training.
             self.update_args_by_game.append(update_args[:])
+            # for each learning agent, adding the hands they had during the game for later training
+            for player_name in hands_per_game:
+                self.hands_by_record_per_game[player_name].append(hands_per_game[player_name][:])
 
     @staticmethod
     def calculate_reward(round_log_length, index, prev_action, acting_player_hand_size, next_state, deck_size, trump_rank, next_next_state) -> Union[int, float]:
@@ -142,13 +157,17 @@ class DurakTrainer:
             training_data = self.training_data_per_player[player.name]
             index = 0
             end = False
-            for game_update_args in self.update_args_by_game:
+            for game_index, game_update_args in enumerate(self.update_args_by_game):
                 player.initialize_for_game()
+                hand_index = 0  # index of the hand of the player during the game
                 for arg1, arg2, arg3 in game_update_args:
                     if type(arg2[0]) == list:
                         # in this case, arg2 represents the table - a tuple of two lists.
                         player.update_end_round(arg1, arg2, arg3)
                     else:
+                        player.empty_hand()
+                        player.take_cards(self.hands_by_record_per_game[player.name][game_index][hand_index])
+                        hand_index += 1
                         # in this case, arg2 represents a card - a tuple of ints.
                         player.update_round_progress(arg1, arg2, arg3)
                         (prev_state, prev_action, reward, next_state) = training_data[index]
@@ -169,18 +188,11 @@ class DurakTrainer:
         losers = self.game_runner.get_losers()
         for player in self.learning_agents:
             losing_ratio = sum([1 for loser in losers if loser is not None and loser.name == player.name]) / len(losers)
-            self.win_ratios[player.name].append(1 - losing_ratio)
+            self.win_ratios_by_episode[player.name].append(1 - losing_ratio)
 
     def print_win_progress(self):
         for player in self.learning_agents:
             print('Player Name:', player.name)
-            for i, win_ratio in enumerate(self.win_ratios[player.name]):
-                print('Episode ' + str(i + 1) + ":", str(win_ratio * 100) + "%")
+            for i, win_ratio in enumerate(self.win_ratios_by_episode[player.name]):
+                print('Episode ' + str(i + 1) + ":", str(round(win_ratio * 100, 2)) + "%")
             print()
-
-
-trainer = DurakTrainer()
-trainer.add_auto_agent(RandomPlayer, 'RandomPlayer')
-trainer.add_auto_agent(SanityCheckPlayer, "SanityCheckPlayer")
-trainer.train_agents(50, 15, test_games_per_episode=20)
-trainer.print_win_progress()
