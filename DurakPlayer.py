@@ -30,6 +30,17 @@ class DurakPlayer:
         """
         self._trump_rank = rank
 
+    def get_action(self, state, to_attack):
+        """
+        Returns an action based on the given state and attack indicator.
+        :param state: (attacking cards, defending cards, legal attack cards, legal defence cards)
+        :param to_attack: boolean flag indicating if the action is an attack or a defence.
+        :return: chosen action.
+        """
+        if to_attack:
+            return self.attack((state[0], state[1]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
+        return self.defend((state[0], state[1]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
+
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         raise NotImplementedError()
 
