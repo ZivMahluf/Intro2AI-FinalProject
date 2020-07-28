@@ -159,6 +159,10 @@ class GUI:
         pygame.display.flip()
 
     @staticmethod
+    def dispose_events():
+        pygame.event.get()
+
+    @staticmethod
     def pressed_quit() -> bool:
         """
         :return: Weather the user pressed the 'x' button on the pygame window.
