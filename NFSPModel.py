@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+from typing import List
 
 import random
 
@@ -39,7 +41,7 @@ class DQNBase(nn.Module):
         x = self.fc(x)
         return x
 
-    def act(self, state, epsilon):
+    def act(self, state, epsilon, legal_cards):
         """
         Parameters
         ----------
@@ -49,10 +51,10 @@ class DQNBase(nn.Module):
         if random.random() > epsilon:  # NoisyNet does not use e-greedy
             with torch.no_grad():
                 state = state.unsqueeze(0)
-                q_value = self.forward(state)
-                action = q_value.max(1)[1].item()
+                q_value = self.forward(state).cpu().detach().numpy()
+                action = np.random.choice(np.array([np.argmax(np.multiply(q_value, legal_cards))]).flatten())
         else:
-            action = random.randrange(self.num_actions)
+            action = np.random.choice(np.argwhere(legal_cards).flatten())
         return action
 
 
@@ -70,7 +72,7 @@ class Policy(DQNBase):
             nn.Softmax(dim=1)
         )
 
-    def act(self, state):
+    def act(self, state, legal_cards: List[int]):
         """
         Parameters
         ----------
@@ -78,6 +80,5 @@ class Policy(DQNBase):
         """
         with torch.no_grad():
             state = state.unsqueeze(0)
-            distribution = self.forward(state)
-            action = distribution.multinomial(1).item()
-        return action
+            distribution = self.forward(state).cpu().detach().numpy()
+            return np.random.choice(np.argmax(np.multiply(distribution, legal_cards)))

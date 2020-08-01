@@ -316,7 +316,7 @@ class DurakEnv:
 # proper running of a durak game from the environment:
 num_games = 100
 game = DurakEnv([NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player"), HumanPlayer(
-    DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
+    DurakEnv.HAND_SIZE, "Human"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
 for game_index in range(num_games):
     state = game.reset()
     game.render()
