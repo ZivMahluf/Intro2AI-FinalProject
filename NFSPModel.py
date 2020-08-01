@@ -51,10 +51,11 @@ class DQNBase(nn.Module):
         if random.random() > epsilon:  # NoisyNet does not use e-greedy
             with torch.no_grad():
                 state = state.unsqueeze(0)
-                q_value = self.forward(state).cpu().detach().numpy()
-                action = np.random.choice(np.array([np.argmax(np.multiply(q_value, legal_cards))]).flatten())
+                q_value = self.forward(state).cpu().detach().numpy().flatten()
+                q_value[np.array(legal_cards) == 0] = -1 * float('inf')
+                action = np.random.choice(np.array([np.argmax(q_value)]).flatten())
         else:
-            action = np.random.choice(np.argwhere(legal_cards).flatten())
+            action = np.random.choice(np.array([np.nonzero(legal_cards)]).flatten())
         return action
 
 
@@ -80,5 +81,7 @@ class Policy(DQNBase):
         """
         with torch.no_grad():
             state = state.unsqueeze(0)
-            distribution = self.forward(state).cpu().detach().numpy()
-            return np.random.choice(np.array([np.argmax(np.multiply(distribution, legal_cards))]).flatten())
+            distribution = self.forward(state).cpu().detach().numpy().flatten()
+            distribution[np.array(legal_cards) == 0] = -1 * float('inf')
+            action = np.random.choice(np.array([np.argmax(distribution)]).flatten())
+            return action

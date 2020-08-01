@@ -55,6 +55,7 @@ class NFSPPlayer(LearningPlayer):
         self.eps_final = 0.2
         self.eps_decay = 0.01  # todo : pick parameters that make sense
         self.round = 1
+        self.is_best_response = False
 
     def act(self, table, legal_cards_to_play):
         legal_cards = [0] * 37
@@ -74,10 +75,32 @@ class NFSPPlayer(LearningPlayer):
         return NFSPPlayer.action_to_card(action)
 
     def attack(self, table, legal_cards_to_play):
-        return self.act(table, legal_cards_to_play)
+        legal_cards = [0] * 37
+        for card in legal_cards_to_play:
+            # -1 means no card
+            if card[0] == -1:
+                legal_cards[36] = 1
+            else:
+                legal_cards[card[0] - 6 + card[1] * 9] = 1
+        self.is_best_response = False
+        if random.random() > self.eta:
+            # todo - check type of legal_cards
+            action = self.policy.act(torch.FloatTensor(legal_cards), legal_cards)
+        else:
+            self.is_best_response = True
+            action = self.current_model.act(torch.FloatTensor(legal_cards), self.epsilon_by_round(), legal_cards)
+
+        card = NFSPPlayer.action_to_card(action)
+        if card[0] != -1:
+            self._hand.remove(card)
+
+        return card
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
-        return self.act(table, legal_cards_to_play)
+        card = self.act(table, legal_cards_to_play)
+        if card[0] != -1:
+            self._hand.remove(card)
+        return card
 
     def epsilon_by_round(self):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
