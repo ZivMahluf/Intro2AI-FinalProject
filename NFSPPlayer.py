@@ -64,12 +64,12 @@ class NFSPPlayer(LearningPlayer):
                 legal_cards[36] = 1
             else:
                 legal_cards[card[0] - 6 + card[1] * 9] = 1
-        is_best_response = False
+        self.is_best_response = False
         if random.random() > self.eta:
             # todo - check type of legal_cards
             action = self.policy.act(torch.FloatTensor(legal_cards), legal_cards)
         else:
-            is_best_response = True
+            self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(legal_cards), self.epsilon_by_round(), legal_cards)
         return NFSPPlayer.action_to_card(action)
 

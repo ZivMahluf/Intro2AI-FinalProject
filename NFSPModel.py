@@ -81,4 +81,4 @@ class Policy(DQNBase):
         with torch.no_grad():
             state = state.unsqueeze(0)
             distribution = self.forward(state).cpu().detach().numpy()
-            return np.random.choice(np.argmax(np.multiply(distribution, legal_cards)))
+            return np.random.choice(np.array([np.argmax(np.multiply(distribution, legal_cards))]).flatten())
