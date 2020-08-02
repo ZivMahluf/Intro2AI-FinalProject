@@ -8,7 +8,6 @@ from GUI import GUI
 
 
 class DurakEnv:
-
     MIN_PLAYERS = 2
     MAX_PLAYERS = 6
     HAND_SIZE = 6
@@ -294,25 +293,37 @@ class DurakEnv:
     def get_loser(self):
         return self.loser
 
+    def get_available_actions(self):
+        """
+        The available actions are chosen by checking whether or not the player is attacking, and then taking the legal attacking/defending cards
+        of the player
+        :return: The available actions (cards) of the player. empty set if no available actions found
+        """
+        if self.turn_player == self.active_players[self.defender]:
+            return set(self.turn_player.hand).intersection(set(self.state[3]))
+        return set(self.turn_player.hand).intersection(set(self.state[2]))
 
-# proper running of a durak game from the environment:
-num_games = 100
-game = DurakEnv([BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), HumanPlayer(DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
-for game_index in range(num_games):
-    state = game.reset()
-    game.render()
-    while True:
-        turn_player = game.get_turn_player()
-        to_attack = game.to_attack()
-        act = turn_player.get_action(state, to_attack)
-        new_state, reward, done, info = game.step(act)
-        state = new_state
-        game.render()
-        if done:
-            break
-    loser = game.get_loser()
-    if loser is not None:
-        print(loser.name, "lost")
-    else:
-        print("ended in a tie")
-print('done')
+
+# # proper running of a durak game from the environment:
+# num_games = 100
+# game = DurakEnv(
+#     [BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), HumanPlayer(DurakEnv.HAND_SIZE, "Hooman"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")],
+#     False)
+# for game_index in range(num_games):
+#     state = game.reset()
+#     game.render()
+#     while True:
+#         turn_player = game.get_turn_player()
+#         to_attack = game.to_attack()
+#         act = turn_player.get_action(state, to_attack)
+#         new_state, reward, done, info = game.step(act)
+#         state = new_state
+#         game.render()
+#         if done:
+#             break
+#     loser = game.get_loser()
+#     if loser is not None:
+#         print(loser.name, "lost")
+#     else:
+#         print("ended in a tie")
+# print('done')

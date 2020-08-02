@@ -2,14 +2,14 @@ import tkinter
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import numpy as np
-import big2Game
-import gameLogic
-import enumerateOptions
-from PPONetwork import PPONetwork, PPOModel
+import PPO.big2Game
+import PPO.gameLogic
+import PPO.enumerateOptions
+from PPO.PPONetwork import PPONetwork, PPOModel
 import tensorflow as tf
 import joblib
 
-mainGame = big2Game.big2Game()
+mainGame = PPO.big2Game.big2Game()
 
 inDim = 412
 outDim = 1695

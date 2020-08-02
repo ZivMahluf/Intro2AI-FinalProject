@@ -80,6 +80,18 @@ class Deck:
         """
         return list(product(Deck.VALUES, Deck.RANKS))
 
+    @staticmethod
+    def get_index_from_card(card):
+        if card == Deck.NO_CARD:
+            return Deck().total_num_cards
+        return Deck.get_full_list_of_cards().index(card)
+
+    @staticmethod
+    def get_card_from_index(index):
+        if index == Deck().total_num_cards:
+            return Deck.NO_CARD
+        return Deck.get_full_list_of_cards()[index]
+
     def __str__(self) -> str:
         """
         :return: String representation of the deck.
