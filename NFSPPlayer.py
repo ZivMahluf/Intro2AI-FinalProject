@@ -16,7 +16,7 @@ import random
 import numpy as np
 from collections import deque
 
-#from common.utils import update_target, print_log, load_model, save_model
+# from common.utils import update_target, print_log, load_model, save_model
 from NFSPModel import DQN, Policy
 #from storage import ReplayBuffer, ReservoirBuffer
 import math as m
@@ -32,14 +32,19 @@ class NFSPPlayer(LearningPlayer):
 
     def __init__(self, hand_size, name):
         # todo pick storage size that is large enough
-        self.capacity = 100000
+        # in a game of 3 random players on average there are 120 steps per game. so for storing
+        # data for 25 games we should store 20 * 120 = 2400 steps
+        self.capacity = 2400
         self.multi_step = 100
         self.learning_rate = 1e-4
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
         self.target_model = DQN(False)
         self.policy = Policy()
+        self.update_target = lambda current, target: target.load_state_dict(current.state_dict())
+        self.update_target(self.current_model, self.target_model)
         self.reservoir_buffer = ReservoirBuffer(self.capacity)
+        self.replay_buffer = ReplayBuffer(self.capacity)
         self.state_deque = deque(maxlen=self.multi_step)
         self.reward_deque = deque(maxlen=self.multi_step)
         self.action_deque = deque(maxlen=self.multi_step)
@@ -56,15 +61,10 @@ class NFSPPlayer(LearningPlayer):
         self.eps_decay = 0.01  # todo : pick parameters that make sense
         self.round = 1
         self.is_best_response = False
+        self.batch_size = 32  # todo check for the best batch size
 
     def act(self, table, legal_cards_to_play):
-        legal_cards = [0] * 37
-        for card in legal_cards_to_play:
-            # -1 means no card
-            if card[0] == -1:
-                legal_cards[36] = 1
-            else:
-                legal_cards[card[0] - 6 + card[1] * 9] = 1
+        legal_cards = self.get_legal_cards_as_vector(legal_cards_to_play)
         self.is_best_response = False
         if random.random() > self.eta:
             # todo - check type of legal_cards
@@ -72,28 +72,28 @@ class NFSPPlayer(LearningPlayer):
         else:
             self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(legal_cards), self.epsilon_by_round(), legal_cards)
+        state = legal_cards  # todo do a better representation for state
+        if self.is_best_response:
+            self.reservoir_buffer.push(state, action)
+
+
         return NFSPPlayer.action_to_card(action)
 
-    def attack(self, table, legal_cards_to_play):
+    @staticmethod
+    def card_numeric_rep(card: Deck.CardType) -> int:
+        # if card == (-1, -1) ret 36
+        return card[0] - 6 + card[1] * 9 if card[0] != -1 else 36
+
+    def get_legal_cards_as_vector(self, legal_cards_to_play):
         legal_cards = [0] * 37
         for card in legal_cards_to_play:
-            # -1 means no card
-            if card[0] == -1:
-                legal_cards[36] = 1
-            else:
-                legal_cards[card[0] - 6 + card[1] * 9] = 1
-        self.is_best_response = False
-        if random.random() > self.eta:
-            # todo - check type of legal_cards
-            action = self.policy.act(torch.FloatTensor(legal_cards), legal_cards)
-        else:
-            self.is_best_response = True
-            action = self.current_model.act(torch.FloatTensor(legal_cards), self.epsilon_by_round(), legal_cards)
+            legal_cards[NFSPPlayer.card_numeric_rep(card)] = 1
+        return legal_cards
 
-        card = NFSPPlayer.action_to_card(action)
+    def attack(self, table, legal_cards_to_play):
+        card = self.act(table, legal_cards_to_play)
         if card[0] != -1:
             self._hand.remove(card)
-
         return card
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
@@ -105,5 +105,73 @@ class NFSPPlayer(LearningPlayer):
     def epsilon_by_round(self):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
 
-    def learn_step(self, old_state, new_state, reward, info):
-        pass
+    def learn_step(self, old_state, new_state, action, reward, info):
+        is_attacking = False
+        if len(old_state[0]) < len(new_state[0]):
+            is_attacking = True
+        if is_attacking:
+            legal_cards_old = [card for card in old_state[2] if card in self._hand or card == Deck.NO_CARD or card == action]
+            legal_cards_new = [card for card in new_state[2] if card in self._hand or card == Deck.NO_CARD]
+        else:
+            legal_cards_old = [card for card in old_state[3] if card in self._hand or card == Deck.NO_CARD or card == action]
+            legal_cards_new = [card for card in new_state[3] if card in self._hand or card == Deck.NO_CARD]
+        legal_card_vec_old = self.get_legal_cards_as_vector(legal_cards_old)
+        legal_card_vec_new = self.get_legal_cards_as_vector(legal_cards_new)
+        self.state_deque.append(legal_card_vec_old)
+        self.reward_deque.append(reward)
+        self.action_deque.append(NFSPPlayer.card_numeric_rep(action))
+        # todo save replay at the end of the episode
+        self.replay_buffer.push(legal_card_vec_old, NFSPPlayer.card_numeric_rep(action), reward, legal_card_vec_new, 0)
+        if self.is_best_response:
+            self.compute_sl_loss()
+            return
+        # at the end of the episode logging record must be deleted
+        self.compute_rl_loss()
+
+
+    def compute_sl_loss(self):
+        batch_size = min(self.batch_size, len(self.reservoir_buffer))
+        state_array, action = self.reservoir_buffer.sample(batch_size)
+        state = torch.FloatTensor(state_array)
+        action = torch.LongTensor(action)
+
+        probs = self.policy.forward(state)
+        probs_with_actions = probs.gather(1, action.unsqueeze(1))
+        log_probs = probs_with_actions.log()
+
+        loss = -1 * log_probs.mean()
+
+        self.sl_optimizer.zero_grad()
+        loss.backward()
+        self.sl_optimizer.step()
+        return loss
+
+    def compute_rl_loss(self):
+        batch_size = min(self.batch_size, len(self.replay_buffer))
+        state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
+        weights = torch.ones(batch_size)
+
+        state = torch.FloatTensor(state)
+        next_state = torch.FloatTensor(next_state)
+        action = torch.LongTensor(action)
+        reward = torch.FloatTensor(reward)
+        done = torch.FloatTensor(done)
+        weights = torch.FloatTensor(weights)
+
+        # Q-Learning with target network
+        q_values = self.current_model.forward(state)
+        target_next_q_values = self.target_model.forward(next_state)
+
+        q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
+        next_q_value = target_next_q_values.max(1)[0]
+        # todo fix expected q-value
+        expected_q_value = reward + next_q_value
+
+        # Huber Loss
+        loss = F.smooth_l1_loss(q_value, expected_q_value.detach(), reduction='none')
+        loss = (loss * weights).mean()
+
+        self.rl_optimizer.zero_grad()
+        loss.backward()
+        self.rl_optimizer.step()
+        return loss

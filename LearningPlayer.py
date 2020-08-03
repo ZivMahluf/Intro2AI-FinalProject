@@ -12,7 +12,7 @@ class LearningPlayer(DurakPlayer):
     def batch_learn(self, batch: List[Tuple[Tuple[List[Deck.CardType], List[Deck.CardType]], Deck.CardType, Union[int, float], Tuple[List[Deck.CardType], List[Deck.CardType]]]]):
         raise NotImplementedError()
 
-    def learn_step(self, old_state, new_state, reward, info):
+    def learn_step(self, old_state, new_state, action, reward, info):
         raise NotImplementedError()
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],

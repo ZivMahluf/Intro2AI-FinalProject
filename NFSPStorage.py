@@ -11,8 +11,8 @@ class ReplayBuffer(object):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
-        state = np.expand_dims(state, 0)
-        next_state = np.expand_dims(next_state, 0)
+        state = np.expand_dims(state, axis=0)
+        next_state = np.expand_dims(next_state, axis=0)
 
         self.buffer.append((state, action, reward, next_state, done))
 
@@ -29,7 +29,6 @@ class ReservoirBuffer(object):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action):
-        state = np.expand_dims(state, 0)
         self.buffer.append((state, action))
 
     def sample(self, batch_size):
@@ -55,7 +54,7 @@ class ReservoirBuffer(object):
                 reservoir[k] = self.buffer[idx]
             idx += 1
         state, action = zip(*random.sample(self.buffer, batch_size))
-        return np.concatenate(state), action
+        return np.concatenate(np.expand_dims(state, axis=0)), action
 
     def __len__(self):
         return len(self.buffer)

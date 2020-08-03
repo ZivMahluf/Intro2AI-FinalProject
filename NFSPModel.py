@@ -66,10 +66,18 @@ class Policy(DQNBase):
 
     def __init__(self):
         super(Policy, self).__init__()
+        # self.fc = nn.Sequential(
+        #     nn.Linear(INPUT_SIZE, 32),
+        #     nn.ReLU(),
+        #     nn.Linear(32, self.num_actions),
+        #     nn.Softmax(dim=1)
+        # )
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, 32),
             nn.ReLU(),
             nn.Linear(32, self.num_actions),
+            nn.ReLU(),
+            nn.Linear(37, self.num_actions),
             nn.Softmax(dim=1)
         )
 
@@ -80,8 +88,8 @@ class Policy(DQNBase):
         state       torch.Tensor with appropritate device type
         """
         with torch.no_grad():
-            state = state.unsqueeze(0)
-            distribution = self.forward(state).cpu().detach().numpy().flatten()
+            new_state = state.unsqueeze(0)
+            distribution = self.forward(new_state).cpu().detach().numpy().flatten()
             distribution[np.array(legal_cards) == 0] = -1 * float('inf')
             action = np.random.choice(np.array([np.argmax(distribution)]).flatten())
             return action
