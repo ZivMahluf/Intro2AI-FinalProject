@@ -25,14 +25,10 @@ def sf01(arr):
     return arr.swapaxes(0, 1).reshape(s[0] * s[1], *s[2:])
 
 
-def convert_state(state):
-    return
-
-
 class big2PPOSimulation(object):
 
     def __init__(self, sess, *, nGames=8, nSteps=20, nMiniBatches=4, nOptEpochs=5, lam=0.95, gamma=0.995, ent_coef=0.01, vf_coef=0.5,
-                 max_grad_norm=0.5, minLearningRate=0.000001, learningRate, clipRange, saveEvery=500):
+                 max_grad_norm=0.5, minLearningRate=0.000001, learningRate, clipRange, saveEvery=100):
 
         # network/model for training
         output_dim = len(Deck.get_full_list_of_cards()) + 1
@@ -315,16 +311,6 @@ class big2PPOSimulation(object):
             cliprangenow = self.clipRange * alpha
 
             states, availAcs, returns, actions, values, neglogpacs = self.get_batch()
-            # flatten the batch
-            # states = states.flatten()
-            # availAcs = availAcs.flatten()
-            # returns = returns.flatten()
-            # actions = actions.flatten()
-            # values = values.flatten()
-            # neglogpacs = neglogpacs.flatten()
-
-            # batchSize = states.shape[0]
-            # self.totTrainingSteps += batchSize
 
             currParams = self.trainingNetwork.getParams()
             mb_lossvals = []
@@ -346,7 +332,7 @@ class big2PPOSimulation(object):
             newParams = self.trainingNetwork.getParams()
             for param in newParams:
                 if np.sum(np.isnan(param)) > 0:
-                    # reset network
+                    # remove changes in network
                     self.trainingNetwork.loadParams(currParams)
                     break
 
