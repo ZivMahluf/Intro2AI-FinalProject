@@ -40,8 +40,8 @@ class PPOPlayer(DurakPlayer):
         #     self._hand.remove(attacking_card)
         # return attacking_card
 
-        converted_state = self._convert_state(table)
-        converted_available_cards = self._convert_available_cards(legal_cards_to_play)
+        converted_state = self.convert_state(table)
+        converted_available_cards = self.convert_available_cards(legal_cards_to_play)
         action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
@@ -57,15 +57,15 @@ class PPOPlayer(DurakPlayer):
         #     self._hand.remove(defending_card)
         # return defending_card
 
-        converted_state = self._convert_state(table)
-        converted_available_cards = self._convert_available_cards(legal_cards_to_play)
+        converted_state = self.convert_state(table)
+        converted_available_cards = self.convert_available_cards(legal_cards_to_play)
         action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
         return action, value, neglogpac
 
-    def _convert_state(self, state):
+    def convert_state(self, state):
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
         full_deck = Deck.get_full_list_of_cards() + [Deck.NO_CARD]
         converted_state = np.zeros(shape=(1, deck_length * 3))
@@ -76,7 +76,7 @@ class PPOPlayer(DurakPlayer):
 
         return converted_state
 
-    def _convert_available_cards(self, legal_cards_to_play):
+    def convert_available_cards(self, legal_cards_to_play):
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
         converted_available_cards = np.full(shape=(1, deck_length), fill_value=-np.inf)
         for card in legal_cards_to_play:

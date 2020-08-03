@@ -24,6 +24,7 @@ def sf01(arr):
     s = arr.shape
     return arr.swapaxes(0, 1).reshape(s[0] * s[1], *s[2:])
 
+
 def convert_state(state):
     return
 
@@ -98,20 +99,13 @@ class big2PPOSimulation(object):
         game = self.vectorizedGame
         state = game.reset()
         while not done:
-
             turn_player = game.get_turn_player()
             available_actions = game.get_available_actions()
             action, value, neglogpac = turn_player.get_action(state, game.to_attack())
             new_state, reward, done, info = game.step(action)  # update the game
 
-            # if available_actions != [Deck.NO_CARD] and len(available_actions) > 0:
-            #     action, value, neglogpac = turn_player.get_action(state, game.to_attack())
-            # else:
-            #     action = Deck.NO_CARD
-            # new_state, reward, done, info = game.step(action)  # update the game
-
             # add to list
-            mb_obs.append(state)
+            mb_obs.append(turn_player.convert_state((state[0], state[1])).flatten())
             mb_pGos.append(turn_player)
             mb_actions.append(action)
             mb_values.append(value[0])
@@ -120,18 +114,6 @@ class big2PPOSimulation(object):
             mb_dones.append(done)
             mb_availAcs.append(available_actions)
             self.epInfos.append(info)
-
-            # if available_actions != [Deck.NO_CARD] and len(available_actions) > 0:
-            #     # add to list
-            #     mb_obs.append(state)
-            #     mb_pGos.append(turn_player)
-            #     mb_actions.append(action)
-            #     mb_values.append(value)
-            #     mb_neglogpacs.append(neglogpac)
-            #     mb_rewards.append(reward)
-            #     mb_dones.append(done)
-            #     mb_availAcs.append(available_actions)
-            #     self.epInfos.append(info)
 
             # update current state
             state = new_state
@@ -144,10 +126,10 @@ class big2PPOSimulation(object):
         self.gamesDone += 1
         self.vectorizedGame = game
         self.state = state
-        mb_obs = np.asarray(tuple(mb_obs))
-        mb_availAcs = np.asarray(tuple(mb_availAcs))
+        mb_obs = np.asarray(tuple(mb_obs), dtype=object)
+        mb_availAcs = np.asarray(tuple(mb_availAcs), dtype=object)
         mb_rewards = np.asarray(tuple(mb_rewards), dtype=np.float32)
-        mb_actions = np.asarray(tuple(mb_actions))
+        mb_actions = np.asarray(tuple(mb_actions), dtype=object)
         mb_values = np.asarray(tuple(mb_values), dtype=np.float32)
         mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float32)
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
@@ -299,9 +281,30 @@ class big2PPOSimulation(object):
     #             joblib.dump(self.losses, "losses.pkl")
     #             joblib.dump(self.epInfos, "epInfos.pkl")
 
+    def get_batch(self):
+        states, availAcs, returns, actions, values, neglogpacs = [], [], [], [], [], []
+        for _ in range(self.nGames):
+            st, av, re, ac, va, ne = self.run()
+            states.append(st)
+            availAcs.append(av)
+            returns.append(re)
+            actions.append(ac)
+            values.append(va)
+            neglogpacs.append(ne)
+
+        # convert to numpy
+        states = np.asarray(tuple(states), dtype=object)
+        availAcs = np.asarray(tuple(availAcs), dtype=object)
+        returns = np.asarray(tuple(returns), dtype=object)
+        actions = np.asarray(tuple(actions), dtype=object)
+        values = np.asarray(tuple(values), dtype=object)
+        neglogpacs = np.asarray(tuple(neglogpacs), dtype=object)
+
+        return states, availAcs, returns, actions, values, neglogpacs
+
     def train(self, nTotalSteps):
 
-        nUpdates = nTotalSteps // (self.nGames * self.nSteps)
+        nUpdates = nTotalSteps // self.nGames
 
         for update in range(nUpdates):
 
@@ -311,33 +314,56 @@ class big2PPOSimulation(object):
                 lrnow = self.minLearningRate
             cliprangenow = self.clipRange * alpha
 
-            states, availAcs, returns, actions, values, neglogpacs = self.run()
+            states, availAcs, returns, actions, values, neglogpacs = self.get_batch()
+            # flatten the batch
+            # states = states.flatten()
+            # availAcs = availAcs.flatten()
+            # returns = returns.flatten()
+            # actions = actions.flatten()
+            # values = values.flatten()
+            # neglogpacs = neglogpacs.flatten()
 
-            batchSize = states.shape[0]
-            self.totTrainingSteps += batchSize
-
-            nTrainingBatch = batchSize // self.nMiniBatches
+            # batchSize = states.shape[0]
+            # self.totTrainingSteps += batchSize
+            #
+            # nTrainingBatch = batchSize // self.nMiniBatches
 
             currParams = self.trainingNetwork.getParams()
-
             mb_lossvals = []
-            inds = np.arange(batchSize)
-            for _ in range(self.nOptEpochs):
-                np.random.shuffle(inds)
-                for start in range(0, batchSize, nTrainingBatch):
-                    end = start + nTrainingBatch
-                    mb_inds = inds[start:end]
-                    mb_lossvals.append(
-                        self.trainingModel.train(lrnow, cliprangenow, states[mb_inds], availAcs[mb_inds], returns[mb_inds], actions[mb_inds],
-                                                 values[mb_inds], neglogpacs[mb_inds]))
+
+            training_minibatch = 20
+            for game_idx in range(self.nGames):
+                steps = 0
+                while steps < states[game_idx].shape[0]:  # less than the amount of steps (actions, updates) in the game
+                    mb_inds = np.arange(steps, steps + training_minibatch)
+                    mb_lossvals.append(self.trainingModel.train(lrnow, cliprangenow, states[game_idx][mb_inds],
+                                                                availAcs[game_idx][mb_inds], returns[game_idx][mb_inds],
+                                                                actions[game_idx][mb_inds], values[game_idx][mb_inds],
+                                                                neglogpacs[game_idx][mb_inds]))
+                    steps += training_minibatch
+
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
+
+            # mb_lossvals = []
+            # inds = np.arange(batchSize)
+            # for _ in range(self.nOptEpochs):
+            #     np.random.shuffle(inds)
+            #     for start in range(0, batchSize, nTrainingBatch):
+            #         end = start + nTrainingBatch
+            #         mb_inds = inds[start:end]
+            #         mb_lossvals.append(
+            #             self.trainingModel.train(lrnow, cliprangenow, states[mb_inds], availAcs[mb_inds], returns[mb_inds], actions[mb_inds],
+            #                                      values[mb_inds], neglogpacs[mb_inds]))
+            # lossvals = np.mean(mb_lossvals, axis=0)
+            # self.losses.append(lossvals)
 
             newParams = self.trainingNetwork.getParams()
             needToReset = 0
             for param in newParams:
                 if np.sum(np.isnan(param)) > 0:
                     needToReset = 1
+                    break
 
             if needToReset == 1:
                 self.trainingNetwork.loadParams(currParams)
@@ -353,7 +379,7 @@ if __name__ == "__main__":
     import time
 
     with tf.compat.v1.Session() as sess:
-        mainSim = big2PPOSimulation(sess, nGames=20, nSteps=20, learningRate=0.00025, clipRange=0.2)
+        mainSim = big2PPOSimulation(sess, nGames=5, nSteps=20, learningRate=0.00025, clipRange=0.2)
         start = time.time()
         mainSim.train(1000)
         end = time.time()
