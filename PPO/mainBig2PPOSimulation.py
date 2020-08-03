@@ -107,12 +107,12 @@ class big2PPOSimulation(object):
             # add to list
             mb_obs.append(turn_player.convert_state((state[0], state[1])).flatten())
             mb_pGos.append(turn_player)
-            mb_actions.append(action)
+            mb_actions.append(Deck.get_index_from_card(action))
             mb_values.append(value[0])
             mb_neglogpacs.append(neglogpac[0])
             mb_rewards.append(reward)
             mb_dones.append(done)
-            mb_availAcs.append(available_actions)
+            mb_availAcs.append(turn_player.convert_available_cards(available_actions).flatten())
             self.epInfos.append(info)
 
             # update current state
@@ -126,10 +126,10 @@ class big2PPOSimulation(object):
         self.gamesDone += 1
         self.vectorizedGame = game
         self.state = state
-        mb_obs = np.asarray(tuple(mb_obs), dtype=object)
-        mb_availAcs = np.asarray(tuple(mb_availAcs), dtype=object)
+        mb_obs = np.asarray(tuple(mb_obs), dtype=np.float32)
+        mb_availAcs = np.asarray(tuple(mb_availAcs), dtype=np.float32)
         mb_rewards = np.asarray(tuple(mb_rewards), dtype=np.float32)
-        mb_actions = np.asarray(tuple(mb_actions), dtype=object)
+        mb_actions = np.asarray(tuple(mb_actions), dtype=np.int32)
         mb_values = np.asarray(tuple(mb_values), dtype=np.float32)
         mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float32)
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
@@ -325,8 +325,6 @@ class big2PPOSimulation(object):
 
             # batchSize = states.shape[0]
             # self.totTrainingSteps += batchSize
-            #
-            # nTrainingBatch = batchSize // self.nMiniBatches
 
             currParams = self.trainingNetwork.getParams()
             mb_lossvals = []
@@ -334,7 +332,7 @@ class big2PPOSimulation(object):
             training_minibatch = 20
             for game_idx in range(self.nGames):
                 steps = 0
-                while steps < states[game_idx].shape[0]:  # less than the amount of steps (actions, updates) in the game
+                while steps + training_minibatch < states[game_idx].shape[0]:  # less than the amount of steps (actions, updates) in the game
                     mb_inds = np.arange(steps, steps + training_minibatch)
                     mb_lossvals.append(self.trainingModel.train(lrnow, cliprangenow, states[game_idx][mb_inds],
                                                                 availAcs[game_idx][mb_inds], returns[game_idx][mb_inds],
@@ -345,28 +343,12 @@ class big2PPOSimulation(object):
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
 
-            # mb_lossvals = []
-            # inds = np.arange(batchSize)
-            # for _ in range(self.nOptEpochs):
-            #     np.random.shuffle(inds)
-            #     for start in range(0, batchSize, nTrainingBatch):
-            #         end = start + nTrainingBatch
-            #         mb_inds = inds[start:end]
-            #         mb_lossvals.append(
-            #             self.trainingModel.train(lrnow, cliprangenow, states[mb_inds], availAcs[mb_inds], returns[mb_inds], actions[mb_inds],
-            #                                      values[mb_inds], neglogpacs[mb_inds]))
-            # lossvals = np.mean(mb_lossvals, axis=0)
-            # self.losses.append(lossvals)
-
             newParams = self.trainingNetwork.getParams()
-            needToReset = 0
             for param in newParams:
                 if np.sum(np.isnan(param)) > 0:
-                    needToReset = 1
+                    # reset network
+                    self.trainingNetwork.loadParams(currParams)
                     break
-
-            if needToReset == 1:
-                self.trainingNetwork.loadParams(currParams)
 
             if update % self.saveEvery == 0:
                 name = "modelParameters" + str(update)
