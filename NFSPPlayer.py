@@ -1,25 +1,26 @@
+from LearningPlayer import LearningPlayer
+import math as m
+from NFSPModel import DQN, Policy
+from collections import deque
+import numpy as np
+import random
+import os
+import time
+import torch.nn.functional as F
+import torch.optim as optim
+import torch
 from LearningPlayer import *
 from NFSPStorage import *
+
 
 class NFSPPlayer(LearningPlayer):
     def __init__(self, hand_size, name, env):
         super().__init__(hand_size, name)
         self.__env = env
-from LearningPlayer import LearningPlayer
-import torch
-import torch.optim as optim
-import torch.nn.functional as F
 
-import time
-import os
-import random
-import numpy as np
-from collections import deque
 
 # from common.utils import update_target, print_log, load_model, save_model
-from NFSPModel import DQN, Policy
 #from storage import ReplayBuffer, ReservoirBuffer
-import math as m
 
 
 class NFSPPlayer(LearningPlayer):
@@ -35,49 +36,55 @@ class NFSPPlayer(LearningPlayer):
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
         self.capacity = 2400
-        self.multi_step = 100
-        self.learning_rate = 1e-4
+        self.rl_learning_rate = 0.1
+        self.sl_learning_rate = 0.005
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
         self.target_model = DQN(False)
         self.policy = Policy()
-        self.update_target = lambda current, target: target.load_state_dict(current.state_dict())
+        self.update_target = lambda current, target: target.load_state_dict(
+            current.state_dict())
         self.update_target(self.current_model, self.target_model)
         self.reservoir_buffer = ReservoirBuffer(self.capacity)
         self.replay_buffer = ReplayBuffer(self.capacity)
-        self.state_deque = deque(maxlen=self.multi_step)
-        self.reward_deque = deque(maxlen=self.multi_step)
-        self.action_deque = deque(maxlen=self.multi_step)
         self.rl_optimizer = optim.Adam(
-            self.current_model.parameters(), lr=self.learning_rate)
-        self.sl_optimizer = optim.Adam(self.policy.parameters(), lr=self.learning_rate)
+            self.current_model.parameters(), lr=self.rl_learning_rate)
+        self.sl_optimizer = optim.Adam(
+            self.policy.parameters(), lr=self.sl_learning_rate)
         self.length_list = []
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        self.eta = 0.5  # todo : pick eta
+        self.eta = 0.1  # todo : pick eta
         self.eps_start = 0.9
-        self.eps_final = 0.2
-        self.eps_decay = 0.01  # todo : pick parameters that make sense
+        self.eps_final = 0.0001
+        self.eps_decay = 0.0001  # todo : pick parameters that make sense
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 32  # todo check for the best batch size
+        self.batch_size = 128  # todo check for the best batch size
+        self.discard_pile = [0]*36
 
     def act(self, table, legal_cards_to_play):
-        legal_cards = self.get_legal_cards_as_vector(legal_cards_to_play)
+        legal_cards_vec = self.get_legal_cards_as_vector(legal_cards_to_play)
+        attacking_cards_vec = self.get_cards_as_vector(table[0])
+        defending_cards_vec = self.get_cards_as_vector(table[1])
+        hand_vec = self.get_cards_as_vector(self._hand)
+        not_possible_card_vec = self.discard_pile
+        state = legal_cards_vec + attacking_cards_vec + \
+            defending_cards_vec + hand_vec + not_possible_card_vec
+
         self.is_best_response = False
         if random.random() > self.eta:
-            # todo - check type of legal_cards
-            action = self.policy.act(torch.FloatTensor(legal_cards), legal_cards)
+            action = self.policy.act(torch.FloatTensor(state), legal_cards_vec)
         else:
             self.is_best_response = True
-            action = self.current_model.act(torch.FloatTensor(legal_cards), self.epsilon_by_round(), legal_cards)
-        state = legal_cards  # todo do a better representation for state
+            action = self.current_model.act(torch.FloatTensor(
+                state), self.epsilon_by_round(), legal_cards_vec)
         if self.is_best_response:
             self.reservoir_buffer.push(state, action)
 
-
         return NFSPPlayer.action_to_card(action)
+
 
     @staticmethod
     def card_numeric_rep(card: Deck.CardType) -> int:
@@ -89,6 +96,12 @@ class NFSPPlayer(LearningPlayer):
         for card in legal_cards_to_play:
             legal_cards[NFSPPlayer.card_numeric_rep(card)] = 1
         return legal_cards
+
+    def get_cards_as_vector(self, cards):
+        card_vec = [0] * 36
+        for card in cards:
+            card_vec[NFSPPlayer.card_numeric_rep(card)] = 1
+        return card_vec
 
     def attack(self, table, legal_cards_to_play):
         card = self.act(table, legal_cards_to_play)
@@ -110,24 +123,24 @@ class NFSPPlayer(LearningPlayer):
         if len(old_state[0]) < len(new_state[0]):
             is_attacking = True
         if is_attacking:
-            legal_cards_old = [card for card in old_state[2] if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_cards_new = [card for card in new_state[2] if card in self._hand or card == Deck.NO_CARD]
+            legal_cards_old = [card for card in old_state[2]
+                               if card in self._hand or card == Deck.NO_CARD or card == action]
+            legal_cards_new = [card for card in new_state[2]
+                               if card in self._hand or card == Deck.NO_CARD]
         else:
-            legal_cards_old = [card for card in old_state[3] if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_cards_new = [card for card in new_state[3] if card in self._hand or card == Deck.NO_CARD]
+            legal_cards_old = [card for card in old_state[3]
+                               if card in self._hand or card == Deck.NO_CARD or card == action]
+            legal_cards_new = [card for card in new_state[3]
+                               if card in self._hand or card == Deck.NO_CARD]
         legal_card_vec_old = self.get_legal_cards_as_vector(legal_cards_old)
         legal_card_vec_new = self.get_legal_cards_as_vector(legal_cards_new)
-        self.state_deque.append(legal_card_vec_old)
-        self.reward_deque.append(reward)
-        self.action_deque.append(NFSPPlayer.card_numeric_rep(action))
-        # todo save replay at the end of the episode
-        self.replay_buffer.push(legal_card_vec_old, NFSPPlayer.card_numeric_rep(action), reward, legal_card_vec_new, 0)
+        self.replay_buffer.push(legal_card_vec_old, NFSPPlayer.card_numeric_rep(
+            action), reward, legal_card_vec_new, 0)
         if self.is_best_response:
             self.compute_sl_loss()
             return
         # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
-
 
     def compute_sl_loss(self):
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
@@ -148,7 +161,8 @@ class NFSPPlayer(LearningPlayer):
 
     def compute_rl_loss(self):
         batch_size = min(self.batch_size, len(self.replay_buffer))
-        state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
+        state, action, reward, next_state, done = self.replay_buffer.sample(
+            batch_size)
         weights = torch.ones(batch_size)
 
         state = torch.FloatTensor(state)
@@ -168,10 +182,29 @@ class NFSPPlayer(LearningPlayer):
         expected_q_value = reward + next_q_value
 
         # Huber Loss
-        loss = F.smooth_l1_loss(q_value, expected_q_value.detach(), reduction='none')
+        loss = F.smooth_l1_loss(
+            q_value, expected_q_value.detach(), reduction='none')
         loss = (loss * weights).mean()
 
         self.rl_optimizer.zero_grad()
         loss.backward()
         self.rl_optimizer.step()
         return loss
+
+    def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
+                         successfully_defended: bool) -> None:
+        """
+        Updates the agent about the result of the round - weather the defending player defended successfully or not.
+        :param defending_player_name: Defending player's name
+        :param table: Cards on the table at the end of the round (before clearing)
+        :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
+        """
+        if successfully_defended:
+            cards_discarded_this_round = table[0]+table[1]
+            cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
+            for i,card in enumerate(cards_discarded_this_round_vec):
+                self.discard_pile[i] += card
+
+        
+    def initialize_for_game(self) -> None:
+        self.discard_pile = [0]*36

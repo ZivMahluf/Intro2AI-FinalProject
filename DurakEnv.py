@@ -312,6 +312,8 @@ class DurakEnv:
     def get_loser(self):
         return self.loser
 
+    
+
 
 # proper running of a durak game from the environment:
 num_games = 100

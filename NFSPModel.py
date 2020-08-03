@@ -8,8 +8,8 @@ import random
 
 
 NUM_ACTIONS = 37
-INPUT_SHAPE = (37,)
-INPUT_SIZE = 37
+INPUT_SIZE = 37 + 36*4
+INPUT_SHAPE = (INPUT_SIZE,)
 
 
 def DQN(is_dueling):
@@ -53,9 +53,11 @@ class DQNBase(nn.Module):
                 state = state.unsqueeze(0)
                 q_value = self.forward(state).cpu().detach().numpy().flatten()
                 q_value[np.array(legal_cards) == 0] = -1 * float('inf')
-                action = np.random.choice(np.array([np.argmax(q_value)]).flatten())
+                action = np.random.choice(
+                    np.array([np.argmax(q_value)]).flatten())
         else:
-            action = np.random.choice(np.array([np.nonzero(legal_cards)]).flatten())
+            action = np.random.choice(
+                np.array([np.nonzero(legal_cards)]).flatten())
         return action
 
 
@@ -89,7 +91,9 @@ class Policy(DQNBase):
         """
         with torch.no_grad():
             new_state = state.unsqueeze(0)
-            distribution = self.forward(new_state).cpu().detach().numpy().flatten()
+            distribution = self.forward(
+                new_state).cpu().detach().numpy().flatten()
             distribution[np.array(legal_cards) == 0] = -1 * float('inf')
-            action = np.random.choice(np.array([np.argmax(distribution)]).flatten())
+            action = np.random.choice(
+                np.array([np.argmax(distribution)]).flatten())
             return action
