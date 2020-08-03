@@ -440,7 +440,7 @@ class big2PPOSimulation(object):
             currParams = self.trainingNetwork.getParams()
             mb_lossvals = []
 
-            training_minibatch = 1
+            training_minibatch = 5
             for game_idx in range(self.nGames):
                 steps = 0
                 while steps + training_minibatch < states[game_idx].shape[0]:  # less than the amount of steps (actions, updates) in the game
@@ -474,8 +474,8 @@ if __name__ == "__main__":
     import time
 
     with tf.compat.v1.Session() as sess:
-        mainSim = big2PPOSimulation(sess, nGames=10, nSteps=20, learningRate=0.025, clipRange=0.2)
+        mainSim = big2PPOSimulation(sess, nGames=5, nSteps=20, learningRate=0.025, clipRange=0.2, saveEvery=2)
         start = time.time()
-        mainSim.train(100)
+        mainSim.train(50)
         end = time.time()
         print("Time Taken: %f" % (end - start))
