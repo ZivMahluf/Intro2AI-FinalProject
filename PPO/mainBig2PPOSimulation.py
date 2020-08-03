@@ -31,7 +31,7 @@ class big2PPOSimulation(object):
 
         # network/model for training
         output_dim = len(Deck.get_full_list_of_cards()) + 1
-        input_dim = 111  # 37 for attacking cards + 37 for defending + 37 for memory
+        input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
         self.trainingNetwork = PPONetwork(sess, input_dim, output_dim, "trainNet")
         self.trainingModel = PPOModel(sess, self.trainingNetwork, input_dim, output_dim, ent_coef, vf_coef, max_grad_norm)
 
@@ -100,14 +100,14 @@ class big2PPOSimulation(object):
             new_state, reward, done, info = game.step(action)  # update the game
 
             # add to list
-            mb_obs.append(turn_player.convert_state((state[0], state[1])).flatten())
+            mb_obs.append(turn_player.last_converted_state.flatten())
             mb_pGos.append(turn_player)
             mb_actions.append(Deck.get_index_from_card(action))
             mb_values.append(value[0])
             mb_neglogpacs.append(neglogpac[0])
             mb_rewards.append(reward)
             mb_dones.append(done)
-            mb_availAcs.append(turn_player.convert_available_cards(available_actions).flatten())
+            mb_availAcs.append(turn_player.last_converted_available_cards.flatten())
             self.epInfos.append(info)
 
             # update current state
@@ -121,12 +121,12 @@ class big2PPOSimulation(object):
         self.gamesDone += 1
         self.vectorizedGame = game
         self.state = state
-        mb_obs = np.asarray(tuple(mb_obs), dtype=np.float32)
-        mb_availAcs = np.asarray(tuple(mb_availAcs), dtype=np.float32)
-        mb_rewards = np.asarray(tuple(mb_rewards), dtype=np.float32)
-        mb_actions = np.asarray(tuple(mb_actions), dtype=np.int32)
-        mb_values = np.asarray(tuple(mb_values), dtype=np.float32)
-        mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float32)
+        mb_obs = np.asarray(tuple(mb_obs), dtype=np.float64)
+        mb_availAcs = np.asarray(tuple(mb_availAcs), dtype=np.float64)
+        mb_rewards = np.asarray(tuple(mb_rewards), dtype=np.float64)
+        mb_actions = np.asarray(tuple(mb_actions), dtype=np.int64)
+        mb_values = np.asarray(tuple(mb_values), dtype=np.float64)
+        mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float64)
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
 
         # convert rewards to keep them in range
@@ -474,7 +474,7 @@ if __name__ == "__main__":
     import time
 
     with tf.compat.v1.Session() as sess:
-        mainSim = big2PPOSimulation(sess, nGames=10, nSteps=20, learningRate=0.025, clipRange=1)
+        mainSim = big2PPOSimulation(sess, nGames=10, nSteps=20, learningRate=0.025, clipRange=0.2)
         start = time.time()
         mainSim.train(100)
         end = time.time()

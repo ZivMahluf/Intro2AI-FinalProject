@@ -13,7 +13,9 @@ class PPOPlayer(DurakPlayer):
     def __init__(self, hand_size: int, name: str, training_network):
         super().__init__(hand_size, name)
         self.training_network = training_network
-        self.memory = np.zeros(shape=(len(Deck.get_full_list_of_cards()) + 1,))
+        self.memory = []
+        self.last_converted_state = None
+        self.last_converted_available_cards = None
 
     def learn(self, prev_table: Tuple[List[Deck.CardType], List[Deck.CardType]], prev_action: Deck.CardType,
               reward: float, next_table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> None:
@@ -28,7 +30,7 @@ class PPOPlayer(DurakPlayer):
         if successfully_defended:
             # update memory to include cards
             for card in table:
-                self.memory[Deck.get_index_from_card(card)] = 1
+                self.memory.append(card)
         else:
             # TODO: implement later on. keep memory for each player separately
             pass
@@ -36,8 +38,10 @@ class PPOPlayer(DurakPlayer):
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
 
-        converted_state = self.convert_state(table)
+        converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
+        self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
+        self.last_converted_available_cards = converted_available_cards
         action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
@@ -49,19 +53,22 @@ class PPOPlayer(DurakPlayer):
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
 
-        converted_state = self.convert_state(table)
+        converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
+        self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
+        self.last_converted_available_cards = converted_available_cards
         action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
         return action, value, neglogpac
 
-    def convert_state(self, state):
+    def convert_input(self, input):
+        # the input contains: hand, attacking_cards, defending_cards, memory, legal_cards_to_play
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
-        converted_state = np.zeros(shape=(1, deck_length * 3))
-        for i in range(len(state)):
-            for card in state[i]:
+        converted_state = np.zeros(shape=(1, deck_length * len(input)))
+        for i in range(len(input)):
+            for card in input[i]:
                 card_idx = Deck.get_index_from_card(card)
                 converted_state[0][deck_length * i + card_idx] = 1
 

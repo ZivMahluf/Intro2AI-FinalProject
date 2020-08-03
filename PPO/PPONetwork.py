@@ -20,17 +20,17 @@ def ortho_init(scale=1.0):
         u, _, v = np.linalg.svd(a, full_matrices=False)
         q = u if u.shape == flat_shape else v  # pick the one with the correct shape
         q = q.reshape(shape)
-        return (scale * q[:shape[0], :shape[1]]).astype(np.float32)
+        return (scale * q[:shape[0], :shape[1]]).astype(np.float64)
 
     return _ortho_init
 
 
-# Implementation takes from baselines.a2c.utils
+# Implementation taken from baselines.a2c.utils
 def fc(x, scope, nh, *, init_scale=1.0, init_bias=0.0):
     with tf.compat.v1.variable_scope(scope):
         nin = x.get_shape()[1]
-        w = tf.compat.v1.get_variable("w", [nin, nh], initializer=ortho_init(init_scale))
-        b = tf.compat.v1.get_variable("b", [nh], initializer=tf.constant_initializer(init_bias))
+        w = tf.compat.v1.get_variable("w", [nin, nh], initializer=ortho_init(init_scale), dtype=tf.float64)
+        b = tf.compat.v1.get_variable("b", [nh], initializer=tf.constant_initializer(init_bias), dtype=tf.float64)
         return tf.matmul(x, w) + b
 
 
@@ -42,8 +42,8 @@ class PPONetwork(object):
         self.name = name
 
         with tf.compat.v1.variable_scope(name):
-            X = tf.compat.v1.placeholder(tf.float32, [None, obs_dim], name="input")
-            available_moves = tf.compat.v1.placeholder(tf.float32, [None, act_dim], name="availableActions")
+            X = tf.compat.v1.placeholder(tf.float64, [None, obs_dim], name="input")
+            available_moves = tf.compat.v1.placeholder(tf.float64, [None, act_dim], name="availableActions")
             # available_moves takes form [0, 0, -inf, 0, -inf...], 0 if action is available, -inf if not.
             activation = tf.nn.relu
             h1 = activation(fc(X, 'fc1', nh=512, init_scale=np.sqrt(2)))
@@ -55,14 +55,14 @@ class PPONetwork(object):
         availPi = tf.add(pi, available_moves)
 
         def sample():
-            u = tf.compat.v1.random_uniform(tf.shape(availPi))
+            u = tf.compat.v1.random_uniform(tf.shape(availPi), dtype=tf.float64)
             return tf.argmax(availPi - tf.compat.v1.log(-tf.compat.v1.log(u)), axis=-1)
 
         a0 = sample()
         el0in = tf.exp(availPi - tf.reduce_max(availPi, axis=-1, keepdims=True))
         z0in = tf.reduce_sum(el0in, axis=-1, keepdims=True)
         p0in = el0in / z0in
-        onehot = tf.one_hot(a0, availPi.get_shape().as_list()[-1])
+        onehot = tf.one_hot(a0, availPi.get_shape().as_list()[-1], dtype=tf.float64)
         neglogpac = -tf.compat.v1.log(tf.reduce_sum(tf.multiply(p0in, onehot), axis=-1))
 
         def step(obs, availAcs):
@@ -108,20 +108,20 @@ class PPOModel(object):
         self.network = network
 
         # placeholder variables
-        ACTIONS = tf.compat.v1.placeholder(tf.int32, [None], name='actionsPlaceholder')
-        ADVANTAGES = tf.compat.v1.placeholder(tf.float32, [None], name='advantagesPlaceholder')
-        RETURNS = tf.compat.v1.placeholder(tf.float32, [None], name='returnsPlaceholder')
-        OLD_NEG_LOG_PROB_ACTIONS = tf.compat.v1.placeholder(tf.float32, [None], name='oldNegLogProbActionsPlaceholder')
-        OLD_VAL_PRED = tf.compat.v1.placeholder(tf.float32, [None], name='oldValPlaceholder')
-        LEARNING_RATE = tf.compat.v1.placeholder(tf.float32, [], name='LRplaceholder')
-        CLIP_RANGE = tf.compat.v1.placeholder(tf.float32, [], name='cliprangePlaceholder')
+        ACTIONS = tf.compat.v1.placeholder(tf.int64, [None], name='actionsPlaceholder')
+        ADVANTAGES = tf.compat.v1.placeholder(tf.float64, [None], name='advantagesPlaceholder')
+        RETURNS = tf.compat.v1.placeholder(tf.float64, [None], name='returnsPlaceholder')
+        OLD_NEG_LOG_PROB_ACTIONS = tf.compat.v1.placeholder(tf.float64, [None], name='oldNegLogProbActionsPlaceholder')
+        OLD_VAL_PRED = tf.compat.v1.placeholder(tf.float64, [None], name='oldValPlaceholder')
+        LEARNING_RATE = tf.compat.v1.placeholder(tf.float64, [], name='LRplaceholder')
+        CLIP_RANGE = tf.compat.v1.placeholder(tf.float64, [], name='cliprangePlaceholder')
 
         l0 = network.availPi - tf.reduce_max(network.availPi, axis=-1, keepdims=True)
         el0 = tf.exp(l0)
         z0 = tf.reduce_sum(el0, axis=-1, keepdims=True)
         p0 = el0 / z0
         entropy = -tf.reduce_sum((p0 + 1e-8) * tf.compat.v1.log(p0 + 1e-8), axis=-1)
-        oneHotActions = tf.one_hot(ACTIONS, network.pi.get_shape().as_list()[-1])
+        oneHotActions = tf.one_hot(ACTIONS, network.pi.get_shape().as_list()[-1], dtype=tf.float64)
         neglogpac = -tf.compat.v1.log(tf.reduce_sum(tf.multiply(p0, oneHotActions), axis=-1))
 
         def neglogp(state, actions, index):
