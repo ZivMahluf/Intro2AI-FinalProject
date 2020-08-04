@@ -130,6 +130,7 @@ class DurakEnv:
             self.do_defence_phase()
         self.check_end_round()
         if self.reset_round:
+            self.update_end_round_players()
             self.update_players_hands()
             self.remove_winners()
             self.update_active_players_order()
@@ -269,6 +270,10 @@ class DurakEnv:
                 self.turn_player = self.active_players[self.attacker]
             elif not self.attack_phase:
                 self.turn_player = self.active_players[self.defender]
+
+    def update_end_round_players(self):
+        for player in self.active_players:
+            player.update_end_round(self.active_players[self.defender].name, (self.attacking_cards, self.defending_cards), self.successful)
 
     def render(self):
         if self.to_render and self.gui is not None:
