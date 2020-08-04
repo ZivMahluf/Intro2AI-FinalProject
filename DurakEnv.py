@@ -50,7 +50,6 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
-            player.set_trump_rank(self.trump_rank)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -92,10 +91,14 @@ class DurakEnv:
     def initialize_deck(self):
         self.deck = Deck()
         self.deck.shuffle()
+        trump_card = self.deck.draw()[0]
+        self.trump_rank = trump_card[1]
+        self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
             player.empty_hand()
+            player.set_trump_rank(self.trump_rank)
 
     def deal_cards(self):
         for player in self.active_players:
