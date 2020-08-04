@@ -253,7 +253,7 @@ class DurakEnv:
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
 
     def dispose_events(self):
-        self.gui.dispose_events()
+        self.gui.dispose_events() if self.gui is not None else None
 
     def check_end_round(self):
         if not self.defending:
@@ -308,26 +308,26 @@ class DurakEnv:
 
 
 # # proper running of a durak game from the environment:
-num_games = 1
-game = DurakEnv(
-    [BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 1"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 2")],
-    True)
-for game_index in range(num_games):
-    state = game.reset()
-    game.render()
-    while True:
-        turn_player = game.get_turn_player()
-        to_attack = game.to_attack()
-        act = turn_player.get_action(state, to_attack)
-        new_state, reward, done, info = game.step(act)
-        state = new_state
-        game.render()
-        if done:
-            break
-    loser = game.get_loser()
-    if loser is not None:
-        print(loser.name, "lost")
-    else:
-        print("ended in a tie")
-    game.end_gui()
-print('done')
+# num_games = 5000
+# game = DurakEnv(
+#     [BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 1"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 2")],
+#     False)
+# for game_index in range(num_games):
+#     state = game.reset()
+#     game.render()
+#     while True:
+#         turn_player = game.get_turn_player()
+#         to_attack = game.to_attack()
+#         act = turn_player.get_action(state, to_attack)
+#         new_state, reward, done, info = game.step(act)
+#         state = new_state
+#         game.render()
+#         if done:
+#             break
+#     loser = game.get_loser()
+#     if loser is not None:
+#         print(loser.name, "lost")
+#     else:
+#         print("ended in a tie")
+#     game.end_gui()
+# print('done')
