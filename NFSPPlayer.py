@@ -57,21 +57,15 @@ class NFSPPlayer(LearningPlayer):
         self.sl_loss_list = []
         self.eta = 0.1  # todo : pick eta
         self.eps_start = 0.9
-        self.eps_final = 0.0001
-        self.eps_decay = 0.0001  # todo : pick parameters that make sense
+        self.eps_final = 0.001
+        self.eps_decay = 10000  # todo : pick parameters that make sense
         self.round = 1
         self.is_best_response = False
         self.batch_size = 128  # todo check for the best batch size
         self.discard_pile = [0]*36
 
     def act(self, table, legal_cards_to_play):
-        legal_cards_vec = self.get_legal_cards_as_vector(legal_cards_to_play)
-        attacking_cards_vec = self.get_cards_as_vector(table[0])
-        defending_cards_vec = self.get_cards_as_vector(table[1])
-        hand_vec = self.get_cards_as_vector(self._hand)
-        not_possible_card_vec = self.discard_pile
-        state = legal_cards_vec + attacking_cards_vec + \
-            defending_cards_vec + hand_vec + not_possible_card_vec
+        legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table)
 
         self.is_best_response = False
         if random.random() > self.eta:
@@ -85,6 +79,15 @@ class NFSPPlayer(LearningPlayer):
 
         return NFSPPlayer.action_to_card(action)
 
+    def get_network_input(self, legal_cards_to_play, table):
+        legal_cards_vec = self.get_legal_cards_as_vector(legal_cards_to_play)
+        attacking_cards_vec = self.get_cards_as_vector(table[0])
+        defending_cards_vec = self.get_cards_as_vector(table[1])
+        hand_vec = self.get_cards_as_vector(self._hand)
+        not_possible_card_vec = self.discard_pile
+        state = legal_cards_vec + attacking_cards_vec + \
+                defending_cards_vec + hand_vec + not_possible_card_vec
+        return legal_cards_vec, state
 
     @staticmethod
     def card_numeric_rep(card: Deck.CardType) -> int:
@@ -119,23 +122,24 @@ class NFSPPlayer(LearningPlayer):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
 
     def learn_step(self, old_state, new_state, action, reward, info):
+        self.round += 1
         is_attacking = False
         if len(old_state[0]) < len(new_state[0]):
             is_attacking = True
         if is_attacking:
-            legal_cards_old = [card for card in old_state[2]
+            legal_old_cards = [card for card in old_state[2]
                                if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_cards_new = [card for card in new_state[2]
+            legal_new_cards = [card for card in new_state[2]
                                if card in self._hand or card == Deck.NO_CARD]
         else:
-            legal_cards_old = [card for card in old_state[3]
+            legal_old_cards = [card for card in old_state[3]
                                if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_cards_new = [card for card in new_state[3]
+            legal_new_cards = [card for card in new_state[3]
                                if card in self._hand or card == Deck.NO_CARD]
-        legal_card_vec_old = self.get_legal_cards_as_vector(legal_cards_old)
-        legal_card_vec_new = self.get_legal_cards_as_vector(legal_cards_new)
-        self.replay_buffer.push(legal_card_vec_old, NFSPPlayer.card_numeric_rep(
-            action), reward, legal_card_vec_new, 0)
+        _, old_input = self.get_network_input(legal_old_cards, old_state)
+        _, new_input = self.get_network_input(legal_new_cards, new_state)
+        self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
+            action), reward, new_input, 0)
         if self.is_best_response:
             self.compute_sl_loss()
             return

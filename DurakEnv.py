@@ -316,9 +316,11 @@ class DurakEnv:
 
 
 # proper running of a durak game from the environment:
-num_games = 100
-game = DurakEnv([NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player"), HumanPlayer(
-    DurakEnv.HAND_SIZE, "Human"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
+num_games = 4000
+game = DurakEnv([NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player"), RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")], False)
+game_num = 0
+lost = 0
+tie = 0
 for game_index in range(num_games):
     state = game.reset()
     game.render()
@@ -328,14 +330,26 @@ for game_index in range(num_games):
         act = turn_player.get_action(state, to_attack)
         new_state, reward, done, info = game.step(act)
         if isinstance(turn_player, LearningPlayer):
-            turn_player.learn_step(state, new_state, reward, info)
+            turn_player.learn_step(state, new_state, act, reward, info)
         state = new_state
         game.render()
         if done:
             break
     loser = game.get_loser()
-    if loser is not None:
-        print(loser.name, "lost")
-    else:
-        print("ended in a tie")
+    game_num += 1
+    if loser and loser.name == 'NFSP Player':
+        lost += 1
+    if not loser:
+        tie += 1
+    if game_num % 100 == 0:
+        to_print = 'batch-'+str(game_num / 100)+': winnings = ' + str((100-lost-tie) / 100) + ', tie = ' + str(tie)
+        print(to_print)
+        lost = 0
+        tie = 0
+
+    # loser = game.get_loser()
+    # if loser is not None:
+    #     print(loser.name, "lost")
+    # else:
+    #     print("ended in a tie")
 print('done')
