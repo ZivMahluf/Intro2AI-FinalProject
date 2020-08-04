@@ -2,11 +2,11 @@ from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
 from NFSPTrainedPlayer import TrainedNFSPPlayer
 from RandomPlayer import RandomPlayer
-from NFSPPlayer import *
 from BasicPlayer import BasicPlayer
 from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
+from NFSPPlayer import *
 
 
 class DurakEnv:
@@ -52,7 +52,6 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
-            player.set_trump_rank(self.trump_rank)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -94,10 +93,14 @@ class DurakEnv:
     def initialize_deck(self):
         self.deck = Deck()
         self.deck.shuffle()
+        trump_card = self.deck.draw()[0]
+        self.trump_rank = trump_card[1]
+        self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
             player.empty_hand()
+            player.set_trump_rank(self.trump_rank)
 
     def deal_cards(self):
         for player in self.active_players:
@@ -308,9 +311,8 @@ class DurakEnv:
             return set(self.turn_player.hand).intersection(set(self.state[3]))
         return set(self.turn_player.hand).intersection(set(self.state[2]))
 
-
 # proper running of a durak game from the environment:
-num_games = 1000
+num_games = 2500
 player = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
 # player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
 player2 = RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")
@@ -355,7 +357,7 @@ print('done')
 
 
 
-#
+
 # num_games = 1
 # player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
 # # player2 = RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")

@@ -36,9 +36,9 @@ class NFSPPlayer(LearningPlayer):
         # todo pick storage size that is large enough
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
-        self.capacity = 2400
-        self.rl_learning_rate = 0.1
-        self.sl_learning_rate = 0.005
+        self.capacity = 10000  # 2400
+        self.rl_learning_rate = 0.1  # 0.1
+        self.sl_learning_rate = 0.005 # 0.005
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
         self.target_model = DQN(False)
@@ -56,16 +56,17 @@ class NFSPPlayer(LearningPlayer):
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        self.eta = 0.1  # todo : pick eta 0.01
-        self.eps_start = 0.9
-        self.eps_final = 0.001
+        self.eta = 0.1  # todo : pick eta 0.1
+        self.eps_start = 0.9  # 0.9 paper 0.06
+        self.eps_final = 0 # 0
         self.eps_decay = 10000  # todo : pick parameters that make sense
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 128  # todo check for the best batch size
+        self.batch_size = 128  # todo check for the best batch size 128
         self.discard_pile = [0]*36
         self.T = 5
         self.t = 1
+        self.update_time = 150  # paper 300, 500 experince
 
     def act(self, table, legal_cards_to_play):
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
@@ -125,6 +126,7 @@ class NFSPPlayer(LearningPlayer):
 
     def epsilon_by_round(self):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
+        # return self.eps_start * (1 / (self.round ** (1/2)))
 
     def learn_step(self, old_state, new_state, action, reward, info):
         is_attacking = False
@@ -151,6 +153,8 @@ class NFSPPlayer(LearningPlayer):
         self.compute_rl_loss()
         self.round += 1
         self.t += 1
+        if self.update_time % self.round == 0:
+            self.update_target(self.current_model, self.target_model)
 
     def compute_sl_loss(self):
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
@@ -214,6 +218,7 @@ class NFSPPlayer(LearningPlayer):
         #     cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
         #     for i,card in enumerate(cards_discarded_this_round_vec):
         #         self.discard_pile[i] += card
+        # pass
         
     def initialize_for_game(self) -> None:
         self.discard_pile = [0]*36

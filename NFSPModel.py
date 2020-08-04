@@ -56,8 +56,21 @@ class DQNBase(nn.Module):
             nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.num_actions)
+            nn.Linear(self.hidden_layer_dim, self.num_actions),
+            nn.ReLU(),
         )
+        # self.fc = nn.Sequential(
+        #     nn.Linear(INPUT_SIZE, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, self.num_actions),
+        #     nn.ReLU(),
+        # )
 
     def forward(self, x):
         x = self.fc(x)
