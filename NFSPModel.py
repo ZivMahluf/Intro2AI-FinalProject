@@ -10,6 +10,7 @@ import random
 NUM_ACTIONS = 37
 INPUT_SIZE = 37 + 36*4
 INPUT_SHAPE = (INPUT_SIZE,)
+HIDDEN_LAYER_DIM = 32  # todo maybe 32
 
 
 def DQN(is_dueling):
@@ -30,31 +31,32 @@ class DQNBase(nn.Module):
 
         self.input_shape = INPUT_SHAPE
         self.num_actions = NUM_ACTIONS  # todo - make constant somewhere
+        self.hidden_layer_dim = HIDDEN_LAYER_DIM
 
         self.fc = nn.Sequential(
-            nn.Linear(INPUT_SIZE, 32),
+            nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, self.num_actions)
+            nn.Linear(self.hidden_layer_dim, self.num_actions)
         )
 
     def forward(self, x):
@@ -95,29 +97,29 @@ class Policy(DQNBase):
         #     nn.Softmax(dim=1)
         # )
         self.fc = nn.Sequential(
-            nn.Linear(INPUT_SIZE, 32),
+            nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(32, self.num_actions),
+            nn.Linear(self.hidden_layer_dim, self.num_actions),
             nn.Softmax(dim=1)
         )
 

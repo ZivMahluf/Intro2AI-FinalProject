@@ -1,3 +1,4 @@
+import pathlib
 from LearningPlayer import LearningPlayer
 import math as m
 from NFSPModel import DQN, Policy
@@ -55,7 +56,7 @@ class NFSPPlayer(LearningPlayer):
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        self.eta = 0.1  # todo : pick eta
+        self.eta = 0.1  # todo : pick eta 0.01
         self.eps_start = 0.9
         self.eps_final = 0.001
         self.eps_decay = 10000  # todo : pick parameters that make sense
@@ -63,10 +64,11 @@ class NFSPPlayer(LearningPlayer):
         self.is_best_response = False
         self.batch_size = 128  # todo check for the best batch size
         self.discard_pile = [0]*36
+        self.T = 5
+        self.t = 1
 
     def act(self, table, legal_cards_to_play):
-        legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table)
-
+        legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         self.is_best_response = False
         if random.random() > self.eta:
             action = self.policy.act(torch.FloatTensor(state), legal_cards_vec)
@@ -79,12 +81,13 @@ class NFSPPlayer(LearningPlayer):
 
         return NFSPPlayer.action_to_card(action)
 
-    def get_network_input(self, legal_cards_to_play, table):
-        legal_cards_vec = self.get_legal_cards_as_vector(legal_cards_to_play)
-        attacking_cards_vec = self.get_cards_as_vector(table[0])
-        defending_cards_vec = self.get_cards_as_vector(table[1])
-        hand_vec = self.get_cards_as_vector(self._hand)
-        not_possible_card_vec = self.discard_pile
+    @staticmethod
+    def get_network_input(legal_cards_to_play, table, discard_pile, hand):
+        legal_cards_vec = NFSPPlayer.get_legal_cards_as_vector(legal_cards_to_play)
+        attacking_cards_vec = NFSPPlayer.get_cards_as_vector(table[0])
+        defending_cards_vec = NFSPPlayer.get_cards_as_vector(table[1])
+        hand_vec = NFSPPlayer.get_cards_as_vector(hand)
+        not_possible_card_vec = discard_pile
         state = legal_cards_vec + attacking_cards_vec + \
                 defending_cards_vec + hand_vec + not_possible_card_vec
         return legal_cards_vec, state
@@ -94,13 +97,15 @@ class NFSPPlayer(LearningPlayer):
         # if card == (-1, -1) ret 36
         return card[0] - 6 + card[1] * 9 if card[0] != -1 else 36
 
-    def get_legal_cards_as_vector(self, legal_cards_to_play):
+    @staticmethod
+    def get_legal_cards_as_vector(legal_cards_to_play):
         legal_cards = [0] * 37
         for card in legal_cards_to_play:
             legal_cards[NFSPPlayer.card_numeric_rep(card)] = 1
         return legal_cards
 
-    def get_cards_as_vector(self, cards):
+    @staticmethod
+    def get_cards_as_vector(cards):
         card_vec = [0] * 36
         for card in cards:
             card_vec[NFSPPlayer.card_numeric_rep(card)] = 1
@@ -122,7 +127,6 @@ class NFSPPlayer(LearningPlayer):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
 
     def learn_step(self, old_state, new_state, action, reward, info):
-        self.round += 1
         is_attacking = False
         if len(old_state[0]) < len(new_state[0]):
             is_attacking = True
@@ -136,8 +140,8 @@ class NFSPPlayer(LearningPlayer):
                                if card in self._hand or card == Deck.NO_CARD or card == action]
             legal_new_cards = [card for card in new_state[3]
                                if card in self._hand or card == Deck.NO_CARD]
-        _, old_input = self.get_network_input(legal_old_cards, old_state)
-        _, new_input = self.get_network_input(legal_new_cards, new_state)
+        _, old_input = self.get_network_input(legal_old_cards, old_state, self.discard_pile, self._hand)
+        _, new_input = self.get_network_input(legal_new_cards, new_state, self.discard_pile, self._hand)
         self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
             action), reward, new_input, 0)
         if self.is_best_response:
@@ -145,6 +149,8 @@ class NFSPPlayer(LearningPlayer):
             return
         # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
+        self.round += 1
+        self.t += 1
 
     def compute_sl_loss(self):
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
@@ -203,12 +209,18 @@ class NFSPPlayer(LearningPlayer):
         :param table: Cards on the table at the end of the round (before clearing)
         :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
         """
-        if successfully_defended:
-            cards_discarded_this_round = table[0]+table[1]
-            cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
-            for i,card in enumerate(cards_discarded_this_round_vec):
-                self.discard_pile[i] += card
-
+        # if successfully_defended:
+        #     cards_discarded_this_round = table[0]+table[1]
+        #     cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
+        #     for i,card in enumerate(cards_discarded_this_round_vec):
+        #         self.discard_pile[i] += card
         
     def initialize_for_game(self) -> None:
         self.discard_pile = [0]*36
+
+    def save_network(self, name):
+        fname = os.path.join("NFSP-models", name)
+        torch.save({
+            'model': self.current_model.state_dict(),
+            'policy': self.policy.state_dict(),
+        }, fname)
