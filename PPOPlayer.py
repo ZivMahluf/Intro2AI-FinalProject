@@ -93,3 +93,6 @@ class PPOPlayer(DurakPlayer):
             card_idx = Deck.get_index_from_card(card)
             converted_available_cards[0][card_idx] = 0
         return converted_available_cards
+
+    def initialize_for_game(self):
+        self.memory = []

@@ -8,6 +8,7 @@ from Deck import Deck
 from DurakEnv import DurakEnv
 from PPOPlayer import PPOPlayer
 import logging
+import time
 
 
 class PPOTrainer(object):
@@ -70,6 +71,8 @@ class PPOTrainer(object):
         self.epInfos = []
         self.gamesDone = 0
         self.losses = []
+
+        logging.info("finished PPO Trainers init")
 
     def run(self):
         # run vectorized games for nSteps and generate mini batch to train on.
@@ -152,6 +155,8 @@ class PPOTrainer(object):
         values = np.asarray(tuple(values), dtype=object)
         neglogpacs = np.asarray(tuple(neglogpacs), dtype=object)
 
+        logging.info("Finished getting a batch")
+
         return states, availAcs, returns, actions, values, neglogpacs
 
     def train(self, total_num_games):
@@ -181,6 +186,8 @@ class PPOTrainer(object):
                                                                 neglogpacs[game_idx][mb_inds]))
                     steps += self.training_steps_per_game
 
+            logging.info("Finished training in update num: %s" % nUpdates)
+
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
 
@@ -189,6 +196,7 @@ class PPOTrainer(object):
                 if np.sum(np.isnan(param)) > 0:
                     # remove changes in network
                     self.trainingNetwork.loadParams(curr_params)
+                    logging.warning("Had to reset the params in update num: %s" % nUpdates)
                     break
 
             if update % self.saveEvery == 0:
@@ -199,13 +207,13 @@ class PPOTrainer(object):
 
 
 if __name__ == "__main__":
-    import time
-
-    logging.basicConfig(filename='logs/PPOTrainer_log')
+    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
 
     with tf.compat.v1.Session() as sess:
-        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=10, learning_rate=0.025, clip_range=0.2, save_every=2)
+        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=2)
         start = time.time()
         mainSim.train(500)
         end = time.time()
-        print("Time Taken: %f" % (end - start))
+        logging.info("Time Taken: %f" % (end - start))
+
+    logging.shutdown()
