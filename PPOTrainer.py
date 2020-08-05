@@ -186,7 +186,7 @@ class PPOTrainer(object):
                                                                 neglogpacs[game_idx][mb_inds]))
                     steps += self.training_steps_per_game
 
-            logging.info("Finished training in update num: %s" % nUpdates)
+            logging.info("Finished training in update num: %s" % update)
 
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
