@@ -314,10 +314,10 @@ class DurakEnv:
 
 # proper running of a durak game from the environment:
 num_games = 1500
-player1 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
-# player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
+# player1 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
+player1 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save1.torch')
 # player2 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
-player2 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
+player2 = RandomPlayer(DurakEnv.HAND_SIZE, "NFSP-a Player")
 game = DurakEnv([player1, player2], False)
 game_num = 0
 lost = 0
@@ -348,8 +348,8 @@ for game_index in range(num_games):
         lost = 0
         tie = 0
 
-player1.save_network('save1.torch')
-player2.save_network('save2.torch')
+# player1.save_network('save1.torch')
+# player2.save_network('save2.torch')
 loser = game.get_loser()
 if loser is not None:
     print(loser.name, "lost")

@@ -37,8 +37,8 @@ class NFSPPlayer(LearningPlayer):
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
         self.capacity = 10000  # 2400
-        self.rl_learning_rate = 0.1  # 0.1
-        self.sl_learning_rate = 0.005 # 0.005
+        self.rl_learning_rate = 0.1  # paper 0.1 experience ?
+        self.sl_learning_rate = 0.005   # 0.005 experience ?
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
         self.target_model = DQN(False)
@@ -56,19 +56,22 @@ class NFSPPlayer(LearningPlayer):
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        self.eta = 0.1  # todo : pick eta 0.1
-        self.eps_start = 0.06  # 0.9 paper 0.06
-        self.eps_final = 0 # 0
+        self.eta = 0.3  # todo : pick eta 0.1 experience 0.3 the variance is high here when learning but it makes a good policy after learning
+        self.eps_start = 0.006  # 0.9 paper 0.06
+        self.eps_final = 0  # 0
         self.eps_decay = 10000  # todo : pick parameters that make sense
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 128  # todo check for the best batch size 128
+        self.batch_size = 64   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
         self.T = 5
         self.t = 1
-        self.update_time = 500  # paper 300, 500 experince
+        self.update_time = 1500  # paper 300
 
     def act(self, table, legal_cards_to_play):
+        """
+        get action
+        """
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         self.is_best_response = False
         if random.random() > self.eta:
@@ -84,6 +87,9 @@ class NFSPPlayer(LearningPlayer):
 
     @staticmethod
     def get_network_input(legal_cards_to_play, table, discard_pile, hand):
+        """
+        returns networ input
+        """
         legal_cards_vec = NFSPPlayer.get_legal_cards_as_vector(legal_cards_to_play)
         attacking_cards_vec = NFSPPlayer.get_cards_as_vector(table[0])
         defending_cards_vec = NFSPPlayer.get_cards_as_vector(table[1])
@@ -95,11 +101,17 @@ class NFSPPlayer(LearningPlayer):
 
     @staticmethod
     def card_numeric_rep(card: Deck.CardType) -> int:
+        """
+        get numeric representation of card
+        """
         # if card == (-1, -1) ret 36
         return card[0] - 6 + card[1] * 9 if card[0] != -1 else 36
 
     @staticmethod
     def get_legal_cards_as_vector(legal_cards_to_play):
+        """
+        legal cards as vector
+        """
         legal_cards = [0] * 37
         for card in legal_cards_to_play:
             legal_cards[NFSPPlayer.card_numeric_rep(card)] = 1
@@ -107,28 +119,43 @@ class NFSPPlayer(LearningPlayer):
 
     @staticmethod
     def get_cards_as_vector(cards):
+        """
+        get cards as vector
+        """
         card_vec = [0] * 36
         for card in cards:
             card_vec[NFSPPlayer.card_numeric_rep(card)] = 1
         return card_vec
 
     def attack(self, table, legal_cards_to_play):
+        """
+        get attack action
+        """
         card = self.act(table, legal_cards_to_play)
         if card[0] != -1:
             self._hand.remove(card)
         return card
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+        """
+        get defend action
+        """
         card = self.act(table, legal_cards_to_play)
         if card[0] != -1:
             self._hand.remove(card)
         return card
 
     def epsilon_by_round(self):
+        """
+        get epsilon for greedy epsilon q learning algo.
+        """
         # return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
         return self.eps_start * (1 / (self.round ** (1/2)))
 
     def learn_step(self, old_state, new_state, action, reward, info):
+        """
+        update neural networks
+        """
         is_attacking = False
         if len(old_state[0]) < len(new_state[0]):
             is_attacking = True
@@ -148,15 +175,18 @@ class NFSPPlayer(LearningPlayer):
             action), reward, new_input, 0)
         if self.is_best_response:
             self.compute_sl_loss()
-            return
-        # at the end of the episode logging record must be deleted
-        self.compute_rl_loss()
+        else:
+            # at the end of the episode logging record must be deleted
+            self.compute_rl_loss()
         self.round += 1
         self.t += 1
         if self.update_time % self.round == 0:
             self.update_target(self.current_model, self.target_model)
 
     def compute_sl_loss(self):
+        """
+        Update policy neural network
+        """
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
         state_array, action = self.reservoir_buffer.sample(batch_size)
         state = torch.FloatTensor(state_array)
@@ -174,6 +204,9 @@ class NFSPPlayer(LearningPlayer):
         return loss
 
     def compute_rl_loss(self):
+        """
+        Update current_model neural network
+        """
         batch_size = min(self.batch_size, len(self.replay_buffer))
         state, action, reward, next_state, done = self.replay_buffer.sample(
             batch_size)
@@ -221,16 +254,32 @@ class NFSPPlayer(LearningPlayer):
         pass
         
     def initialize_for_game(self) -> None:
+        """
+        Init discard pile
+        """
+        super().initialize_for_game()
         self.discard_pile = [0]*36
 
-    def save_network(self, name):
+    def save_network(self, name: str):
+        """
+        saves the neural network for future use
+        Parameters
+        ----------
+        name: name of the file that will store the neural network
+        """
         fname = os.path.join("NFSP-models", name)
         torch.save({
             'model': self.current_model.state_dict(),
             'policy': self.policy.state_dict(),
         }, fname)
 
-    def load_model(self, path):
+    def load_model(self, path: str):
+        """
+        load neural network from file
+        Parameters
+        ----------
+        path:  name of the file that will store the neural network
+        """
         fname = os.path.join("NFSP-models", path)
         """
             load_model(models={"p1": p1_current_model, "p2": p2_current_model},

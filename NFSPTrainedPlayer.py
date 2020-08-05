@@ -59,3 +59,6 @@ class TrainedNFSPPlayer(NFSPPlayer):
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         return self.act(table, legal_cards_to_play)
+
+    def initialize_for_game(self):
+        super().initialize_for_game()
