@@ -95,4 +95,5 @@ class PPOPlayer(DurakPlayer):
         return converted_available_cards
 
     def initialize_for_game(self):
+        super().initialize_for_game()
         self.memory = []

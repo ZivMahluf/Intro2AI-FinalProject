@@ -360,6 +360,7 @@ class DurakRunner:
         """
         for player in self.active_players:
             player.update_round_progress(self.last_attacker_name, self.attacking_card, True)
+            player.update_round_progress(self.last_attacker_name, self.attacking_card, True)
 
     def update_players_defence(self):
         """

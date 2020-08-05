@@ -117,7 +117,7 @@ class PPOTrainer(object):
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
 
         # convert rewards to keep them in range
-        mb_rewards /= self.rewardNormalization
+        # mb_rewards /= self.rewardNormalization
 
         # discount/bootstrap value function with generalized advantage estimation:
         mb_returns = np.zeros_like(mb_rewards)
