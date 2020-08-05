@@ -311,29 +311,29 @@ class DurakEnv:
         return set(self.turn_player.hand).intersection(set(self.state[2]))
 
 
-# proper running of a durak game from the environment:
-import tensorflow as tf
-with tf.compat.v1.Session() as sess:
-    num_games = 5000
-    game = DurakEnv(
-        [BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 1"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 2"),
-         PPOPlayer(DurakEnv.HAND_SIZE, "PPO Player", None, sess)], False)
-    for game_index in range(num_games):
-        state = game.reset()
-        game.render()
-        while True:
-            turn_player = game.get_turn_player()
-            to_attack = game.to_attack()
-            act = turn_player.get_action(state, to_attack)
-            new_state, reward, done, info = game.step(act)
-            state = new_state
-            game.render()
-            if done:
-                break
-        loser = game.get_loser()
-        if loser is not None:
-            print(loser.name, "lost")
-        else:
-            print("ended in a tie")
-        game.end_gui()
-    print('done')
+# # proper running of a durak game from the environment:
+# import tensorflow as tf
+# with tf.compat.v1.Session() as sess:
+#     num_games = 5000
+#     game = DurakEnv(
+#         [BasicPlayer(DurakEnv.HAND_SIZE, "Basic Player"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 1"), RandomPlayer(DurakEnv.HAND_SIZE, "Random 2"),
+#          PPOPlayer(DurakEnv.HAND_SIZE, "PPO Player", None, sess)], False)
+#     for game_index in range(num_games):
+#         state = game.reset()
+#         game.render()
+#         while True:
+#             turn_player = game.get_turn_player()
+#             to_attack = game.to_attack()
+#             act = turn_player.get_action(state, to_attack)
+#             new_state, reward, done, info = game.step(act)
+#             state = new_state
+#             game.render()
+#             if done:
+#                 break
+#         loser = game.get_loser()
+#         if loser is not None:
+#             print(loser.name, "lost")
+#         else:
+#             print("ended in a tie")
+#         game.end_gui()
+#     print('done')

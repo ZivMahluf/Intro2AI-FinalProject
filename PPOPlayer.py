@@ -38,7 +38,7 @@ class PPOPlayer(DurakPlayer):
             for card in itertools.chain(table[0], table[1]):
                 self.memory.append(card)
         else:
-            # TODO: implement later on. keep memory for each player separately
+            # You can save the memory for each player separately here. We chose not to.
             pass
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
