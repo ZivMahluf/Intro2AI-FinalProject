@@ -1,19 +1,14 @@
 # main big2PPOSimulation class
 
 import numpy as np
-from BasicPlayer import BasicPlayer
-from HumanPlayer import HumanPlayer
-from PPO.PPONetwork import PPONetwork, PPOModel
-from PPO.big2Game import vectorizedBig2Games
+from PPONetwork import PPONetwork, PPOModel
 import tensorflow as tf
 import joblib
-import copy
 from Deck import Deck
 from DurakEnv import DurakEnv
-from PPO.PPOPlayer import PPOPlayer
+from PPOPlayer import PPOPlayer
 
 # taken directly from baselines implementation - reshape minibatch in preparation for training.
-from RandomPlayer import RandomPlayer
 
 
 def sf01(arr):
@@ -24,7 +19,7 @@ def sf01(arr):
     return arr.swapaxes(0, 1).reshape(s[0] * s[1], *s[2:])
 
 
-class big2PPOSimulation(object):
+class PPOTrainer(object):
 
     def __init__(self, sess, *, nGames=8, nSteps=20, nMiniBatches=4, nOptEpochs=5, lam=0.95, gamma=0.995, ent_coef=0.01, vf_coef=0.5,
                  max_grad_norm=0.5, minLearningRate=0.000001, learningRate, clipRange, saveEvery=100):
@@ -464,7 +459,7 @@ class big2PPOSimulation(object):
                     break
 
             if update % self.saveEvery == 0:
-                name = "modelParameters" + str(update)
+                name = "model" + str(update)
                 self.trainingNetwork.saveParams(name)
                 joblib.dump(self.losses, "losses.pkl")
                 joblib.dump(self.epInfos, "epInfos.pkl")
@@ -474,7 +469,7 @@ if __name__ == "__main__":
     import time
 
     with tf.compat.v1.Session() as sess:
-        mainSim = big2PPOSimulation(sess, nGames=5, nSteps=20, learningRate=0.025, clipRange=0.2, saveEvery=2)
+        mainSim = PPOTrainer(sess, nGames=5, learningRate=0.025, clipRange=0.2, saveEvery=2)
         start = time.time()
         mainSim.train(50)
         end = time.time()

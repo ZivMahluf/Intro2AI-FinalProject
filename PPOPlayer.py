@@ -1,35 +1,41 @@
-import LearningPlayer
 from DurakPlayer import Deck, Tuple, List, Optional, DurakPlayer
-from typing import Union
-import random
-import tensorflow as tf
-from PPO.PPONetwork import PPONetwork, PPOModel
+from PPONetwork import PPONetwork
 import joblib
 import numpy as np
+import os
+import itertools
 
 
 class PPOPlayer(DurakPlayer):
 
-    def __init__(self, hand_size: int, name: str, training_network):
+    def __init__(self, hand_size: int, name: str, training_network=None, sess=None):
         super().__init__(hand_size, name)
-        self.training_network = training_network
         self.memory = []
         self.last_converted_state = None
         self.last_converted_available_cards = None
 
-    def learn(self, prev_table: Tuple[List[Deck.CardType], List[Deck.CardType]], prev_action: Deck.CardType,
-              reward: float, next_table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> None:
-        raise NotImplementedError()
+        if training_network:
+            self.test_phase = False
+            self.training_network = training_network  # this will be done in the training phase
+        else:
+            self.test_phase = True
+            # load the network from memory, and use it for interpretation (not training)
+            output_dim = len(Deck.get_full_list_of_cards()) + 1
+            input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
+            self.training_network = PPONetwork(sess, input_dim, output_dim, "testNet")
 
-    def batch_learn(self, batch: List[
-        Tuple[Tuple[List[Deck.CardType], List[Deck.CardType]], Deck.CardType, Union[int, float], Tuple[List[Deck.CardType], List[Deck.CardType]]]]):
-        pass
+            # find latest model parameters file
+            files = [(int(f[5:]), f) for f in os.listdir(os.curdir + '/PPOParams') if f.find('model') != -1]
+            files.sort(key=lambda x: x[0])
+            latest_file = files[-1][1]
+            params = joblib.load(os.curdir + '/PPOParams/' + latest_file)
+            self.training_network.loadParams(params)
 
     def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                          successfully_defended: bool) -> None:
         if successfully_defended:
             # update memory to include cards
-            for card in table:
+            for card in itertools.chain(table[0], table[1]):
                 self.memory.append(card)
         else:
             # TODO: implement later on. keep memory for each player separately
@@ -48,6 +54,9 @@ class PPOPlayer(DurakPlayer):
             self._hand.remove(action)
         else:
             action = Deck.NO_CARD
+
+        if self.test_phase:
+            return action
         return action, value, neglogpac
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
@@ -61,6 +70,9 @@ class PPOPlayer(DurakPlayer):
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
+
+        if self.test_phase:
+            return action
         return action, value, neglogpac
 
     def convert_input(self, input):
