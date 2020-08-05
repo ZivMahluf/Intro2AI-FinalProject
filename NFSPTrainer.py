@@ -1,13 +1,15 @@
 from AggressivePlayer import AggressivePlayer
+from DefensivePlayer import DefensivePlayer
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
+from LearningPlayer import LearningPlayer
+from NFSPPlayer import NFSPPlayer
 from NFSPTrainedPlayer import TrainedNFSPPlayer
 from RandomPlayer import RandomPlayer
 from BasicPlayer import BasicPlayer
 from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
-from NFSPPlayer import *
 
 
 class DurakEnv:
@@ -53,6 +55,7 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
+            player.set_trump_rank(self.trump_rank)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -94,14 +97,10 @@ class DurakEnv:
     def initialize_deck(self):
         self.deck = Deck()
         self.deck.shuffle()
-        trump_card = self.deck.draw()[0]
-        self.trump_rank = trump_card[1]
-        self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
             player.empty_hand()
-            player.set_trump_rank(self.trump_rank)
 
     def deal_cards(self):
         for player in self.active_players:
@@ -312,12 +311,15 @@ class DurakEnv:
             return set(self.turn_player.hand).intersection(set(self.state[3]))
         return set(self.turn_player.hand).intersection(set(self.state[2]))
 
+
 # proper running of a durak game from the environment:
-num_games = 1500
-player1 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
-# player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
-# player2 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
-player2 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
+num_games = 10000
+player1 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save5.torch')
+# player1 = NFSPPlayer(DurakEnv.HAND_SIZE, 'NFSP-1')
+# player2 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save2.torch')
+# player2 = RandomPlayer(DurakEnv.HAND_SIZE, "NFSPq Player")
+# player2 = NFSPPlayer(DurakEnv.HAND_SIZE, 'NFSP-2')
+player2 = HumanPlayer(DurakEnv.HAND_SIZE, 'NFSP-2')
 game = DurakEnv([player1, player2], False)
 game_num = 0
 lost = 0
@@ -348,20 +350,13 @@ for game_index in range(num_games):
         lost = 0
         tie = 0
 
-player1.save_network('save1.torch')
-player2.save_network('save2.torch')
-loser = game.get_loser()
-if loser is not None:
-    print(loser.name, "lost")
-    # else:
-    #     print("ended in a tie")
+# player1.save_network('save4.torch')
+# player2.save_network('save5.torch')
 print('done')
 
-
-
-
+#
 # num_games = 1
-# player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
+# player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save2.torch')
 # # player2 = RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")
 # player2 = HumanPlayer(DurakEnv.HAND_SIZE, "Random Player")
 # game = DurakEnv([player, player2], False)

@@ -10,7 +10,7 @@ import random
 NUM_ACTIONS = 37
 INPUT_SIZE = 37 + 36*4
 INPUT_SHAPE = (INPUT_SIZE,)
-HIDDEN_LAYER_DIM = 32  # todo maybe 32
+HIDDEN_LAYER_DIM = 64  # todo maybe 32
 
 
 def DQN(is_dueling):
@@ -35,20 +35,6 @@ class DQNBase(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
@@ -118,21 +104,8 @@ class Policy(DQNBase):
             nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-            nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.num_actions),
+            nn.ReLU(),
             nn.Softmax(dim=1)
         )
 

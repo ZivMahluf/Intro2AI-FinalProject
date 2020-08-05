@@ -57,7 +57,7 @@ class NFSPPlayer(LearningPlayer):
         self.rl_loss_list = []
         self.sl_loss_list = []
         self.eta = 0.1  # todo : pick eta 0.1
-        self.eps_start = 0.9  # 0.9 paper 0.06
+        self.eps_start = 0.06  # 0.9 paper 0.06
         self.eps_final = 0 # 0
         self.eps_decay = 10000  # todo : pick parameters that make sense
         self.round = 1
@@ -66,7 +66,7 @@ class NFSPPlayer(LearningPlayer):
         self.discard_pile = [0]*36
         self.T = 5
         self.t = 1
-        self.update_time = 150  # paper 300, 500 experince
+        self.update_time = 500  # paper 300, 500 experince
 
     def act(self, table, legal_cards_to_play):
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
@@ -125,8 +125,8 @@ class NFSPPlayer(LearningPlayer):
         return card
 
     def epsilon_by_round(self):
-        return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
-        # return self.eps_start * (1 / (self.round ** (1/2)))
+        # return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
+        return self.eps_start * (1 / (self.round ** (1/2)))
 
     def learn_step(self, old_state, new_state, action, reward, info):
         is_attacking = False
@@ -213,12 +213,12 @@ class NFSPPlayer(LearningPlayer):
         :param table: Cards on the table at the end of the round (before clearing)
         :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
         """
-        # if successfully_defended:
-        #     cards_discarded_this_round = table[0]+table[1]
-        #     cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
-        #     for i,card in enumerate(cards_discarded_this_round_vec):
-        #         self.discard_pile[i] += card
-        # pass
+        if successfully_defended:
+            cards_discarded_this_round = table[0]+table[1]
+            cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
+            for i,card in enumerate(cards_discarded_this_round_vec):
+                self.discard_pile[i] += card
+        pass
         
     def initialize_for_game(self) -> None:
         self.discard_pile = [0]*36
@@ -229,3 +229,16 @@ class NFSPPlayer(LearningPlayer):
             'model': self.current_model.state_dict(),
             'policy': self.policy.state_dict(),
         }, fname)
+
+    def load_model(self, path):
+        fname = os.path.join("NFSP-models", path)
+        """
+            load_model(models={"p1": p1_current_model, "p2": p2_current_model},
+               policies={"p1": p1_policy, "p2": p2_policy}, args=args)
+        """
+        if not os.path.exists(fname):
+            raise ValueError("No model saved with name {}".format(fname))
+        checkpoint = torch.load(fname, None)
+        self.current_model.load_state_dict(checkpoint['model'])
+        self.policy.load_state_dict(checkpoint['policy'])
+        self.update_target(self.current_model, self.target_model)
