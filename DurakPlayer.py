@@ -13,8 +13,10 @@ class DurakPlayer:
         """
         self._hand = []
         self._trump_rank = None
+        self._other_ranks = None
         self.__initial_hand_size = hand_size
         self.__name = name
+        self.last_hand = []
 
     def take_cards(self, cards: List[Deck.CardType]) -> None:
         """
@@ -29,6 +31,9 @@ class DurakPlayer:
         :param rank: Rank to set as trump rank.
         """
         self._trump_rank = rank
+        ranks = Deck.RANKS.copy()
+        ranks.remove(rank)
+        self._other_ranks = ranks
 
     def get_action(self, state, to_attack):
         """
@@ -37,6 +42,7 @@ class DurakPlayer:
         :param to_attack: boolean flag indicating if the action is an attack or a defence.
         :return: chosen action.
         """
+        self.last_hand = self.hand.copy()
         if to_attack:
             return self.attack((state[0], state[1]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
         return self.defend((state[0], state[1]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
@@ -205,7 +211,14 @@ class DurakPlayer:
         pass
 
     def initialize_for_game(self) -> None:
-        pass
+        self._trump_rank = None
+        self._other_ranks = None
+        self.last_hand = []
+        self._hand = []
+
+    @property
+    def get_others_rank(self) -> List[int]:
+        return self._other_ranks
 
     @property
     def hand_size(self) -> int:
