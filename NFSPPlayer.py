@@ -32,13 +32,15 @@ class NFSPPlayer(LearningPlayer):
             return -1, -1
         return network_output % 9 + 6, int(network_output / 9)
 
-    def __init__(self, hand_size, name):
+    def __init__(self, hand_size, name, device='cpu'): # cude for gpu
         # todo pick storage size that is large enough
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
         self.capacity = 10000  # 2400
-        self.rl_learning_rate = 0.1  # paper 0.1 experience ?
-        self.sl_learning_rate = 0.005   # 0.005 experience ?
+        self.rl_learning_rate = 0.1  # paper 0.1 experience ? # high learning rate here make the current q value
+        # more dominant (0.5, 0.7, 0.6
+        self.sl_learning_rate = 0.001   # 0.005 experience ? high learning rate here make
+        # the network memorize responses better (0.0005, 0.00075, 0.0025, 0.001
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
         self.target_model = DQN(False)
@@ -56,17 +58,17 @@ class NFSPPlayer(LearningPlayer):
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        self.eta = 0.3  # todo : pick eta 0.1 experience 0.3 the variance is high here when learning but it makes a good policy after learning
-        self.eps_start = 0.006  # 0.9 paper 0.06
-        self.eps_final = 0  # 0
-        self.eps_decay = 10000  # todo : pick parameters that make sense
+        self.eta = 0.1  # todo : pick eta 0.1 experience 0.3
+        self.eps_start = 0.9  # 0.9 paper 0.06 check which epsilon function to use
+        self.eps_final = 0.0001  # 0
+        self.eps_decay = 50  # todo : pick parameters that make sense, (10000, 10, )
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 64   # todo check for the best batch size (paper 128)
+        self.batch_size = 128   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
         self.T = 5
-        self.t = 1
-        self.update_time = 1500  # paper 300
+        self.update_time = 1500  # paper 300, (1500, 3000)
+        self.device = device
 
     def act(self, table, legal_cards_to_play):
         """
@@ -75,11 +77,11 @@ class NFSPPlayer(LearningPlayer):
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         self.is_best_response = False
         if random.random() > self.eta:
-            action = self.policy.act(torch.FloatTensor(state), legal_cards_vec)
+            action = self.policy.act(torch.FloatTensor(state).to(self.device), legal_cards_vec)
         else:
             self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(
-                state), self.epsilon_by_round(), legal_cards_vec)
+                state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
         if self.is_best_response:
             self.reservoir_buffer.push(state, action)
 
@@ -149,8 +151,8 @@ class NFSPPlayer(LearningPlayer):
         """
         get epsilon for greedy epsilon q learning algo.
         """
-        # return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
-        return self.eps_start * (1 / (self.round ** (1/2)))
+        return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
+        # return self.eps_start * (1 / (self.round ** (1/2)))
 
     def learn_step(self, old_state, new_state, action, reward, info):
         """
@@ -179,7 +181,6 @@ class NFSPPlayer(LearningPlayer):
             # at the end of the episode logging record must be deleted
             self.compute_rl_loss()
         self.round += 1
-        self.t += 1
         if self.update_time % self.round == 0:
             self.update_target(self.current_model, self.target_model)
 
@@ -189,8 +190,8 @@ class NFSPPlayer(LearningPlayer):
         """
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
         state_array, action = self.reservoir_buffer.sample(batch_size)
-        state = torch.FloatTensor(state_array)
-        action = torch.LongTensor(action)
+        state = torch.FloatTensor(state_array).to(self.device)
+        action = torch.LongTensor(action).to(self.device)
 
         probs = self.policy.forward(state)
         probs_with_actions = probs.gather(1, action.unsqueeze(1))
@@ -210,14 +211,14 @@ class NFSPPlayer(LearningPlayer):
         batch_size = min(self.batch_size, len(self.replay_buffer))
         state, action, reward, next_state, done = self.replay_buffer.sample(
             batch_size)
-        weights = torch.ones(batch_size)
+        weights = torch.ones(batch_size).to(self.device)
 
-        state = torch.FloatTensor(state)
-        next_state = torch.FloatTensor(next_state)
-        action = torch.LongTensor(action)
-        reward = torch.FloatTensor(reward)
-        done = torch.FloatTensor(done)
-        weights = torch.FloatTensor(weights)
+        state = torch.FloatTensor(state).to(self.device)
+        next_state = torch.FloatTensor(next_state).to(self.device)
+        action = torch.LongTensor(action).to(self.device)
+        reward = torch.FloatTensor(reward).to(self.device)
+        done = torch.FloatTensor(done).to(self.device)
+        weights = torch.FloatTensor(weights).to(self.device)
 
         # Q-Learning with target network
         q_values = self.current_model.forward(state)
@@ -249,7 +250,7 @@ class NFSPPlayer(LearningPlayer):
         if successfully_defended:
             cards_discarded_this_round = table[0]+table[1]
             cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
-            for i,card in enumerate(cards_discarded_this_round_vec):
+            for i, card in enumerate(cards_discarded_this_round_vec):
                 self.discard_pile[i] += card
         pass
         

@@ -1,5 +1,3 @@
-import copy
-
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
 from LearningPlayer import LearningPlayer
@@ -55,6 +53,7 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
+            player.set_trump_rank(self.trump_rank)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -96,9 +95,9 @@ class DurakEnv:
     def initialize_deck(self):
         self.deck = Deck()
         self.deck.shuffle()
-        trump_card = self.deck.draw()[0]
-        self.trump_rank = trump_card[1]
-        self.deck.to_bottom(trump_card)
+        # trump_card = self.deck.draw()[0]
+        # self.trump_rank = trump_card[1]
+        # self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
@@ -280,9 +279,6 @@ class DurakEnv:
                len([c for c in self.turn_player.last_hand if c[1] == game.trump_rank])
 
     def calculate_reward(self):
-        if self.turn_player.hand_size == 0:
-            return 100  # maximum reward possible, cause the player won
-
         # weights = [1, 2, 2]  # used in order to give trumps changes higher priority
         # weight_sum = weights[0] + weights[1] + weights[2]
         # norm_weights = (weight_sum / float(weights[0] * 12),
@@ -294,10 +290,11 @@ class DurakEnv:
         ranks_avg_change = self.calculate_average_change(for_trump=False) / 27
         trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
         diff_in_trump_cards = self.difference_in_trump_cards() / 9
-        cards_in_hand = (len(self.turn_player.last_hand) - len(self.turn_player.hand)) / 36
+        # cards_in_hand = (len(self.turn_player.last_hand) - len(self.turn_player.hand)) / 36
 
-        sum_all = (ranks_avg_change * 0.2 + trumps_avg_change * 0.3 + diff_in_trump_cards * 0.4 +
-                   0.1 * cards_in_hand) * 100
+        sum_all = (0.4 * ranks_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
+        if self.turn_player.hand_size == 0:
+            sum_all += 80
 
         return sum_all
 
@@ -351,7 +348,6 @@ class DurakEnv:
         if self.turn_player == self.active_players[self.defender]:
             return set(self.turn_player.hand).intersection(set(self.state[3]))
         return set(self.turn_player.hand).intersection(set(self.state[2]))
-
 
 # proper running of a durak game from the environment:
 num_games = 1500

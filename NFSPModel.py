@@ -10,7 +10,7 @@ import random
 NUM_ACTIONS = 37
 INPUT_SIZE = 37 + 36*4
 INPUT_SHAPE = (INPUT_SIZE,)
-HIDDEN_LAYER_DIM = 64  # todo maybe 32
+HIDDEN_LAYER_DIM = 64  # todo maybe 32, 64
 
 
 def DQN(is_dueling):
@@ -33,8 +33,55 @@ class DQNBase(nn.Module):
         self.num_actions = NUM_ACTIONS  # todo - make constant somewhere
         self.hidden_layer_dim = HIDDEN_LAYER_DIM
 
+        # self.fc = nn.Sequential(
+        #     nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.num_actions),
+        #     nn.ReLU(),
+        # )
+
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
@@ -45,6 +92,8 @@ class DQNBase(nn.Module):
             nn.Linear(self.hidden_layer_dim, self.num_actions),
             nn.ReLU(),
         )
+
+
         # self.fc = nn.Sequential(
         #     nn.Linear(INPUT_SIZE, 512),
         #     nn.ReLU(),
@@ -95,6 +144,20 @@ class Policy(DQNBase):
         #     nn.Linear(32, self.num_actions),
         #     nn.Softmax(dim=1)
         # )
+        # self.fc = nn.Sequential(
+        #     nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_layer_dim, self.num_actions),
+        #     nn.Softmax(dim=1),
+        #     nn.ReLU(),
+        # )
+
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
             nn.ReLU(),
@@ -104,10 +167,46 @@ class Policy(DQNBase):
             nn.ReLU(),
             nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_layer_dim, self.num_actions),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
             nn.ReLU(),
-            nn.Softmax(dim=1)
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_layer_dim, self.num_actions),
+            nn.Softmax(dim=1),
         )
+
+
+
 
     def act(self, state, legal_cards: List[int]):
         """
