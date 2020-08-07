@@ -1,16 +1,12 @@
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
-from LearningPlayer import LearningPlayer
-from NFSPPlayer import NFSPPlayer
-from NFSPTrainedPlayer import TrainedNFSPPlayer
-from RandomPlayer import RandomPlayer
-from BasicPlayer import BasicPlayer
 from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
 
 
 class DurakEnv:
+
     MIN_PLAYERS = 2
     MAX_PLAYERS = 6
     HAND_SIZE = 6
@@ -50,9 +46,7 @@ class DurakEnv:
         self.first_initialize_players()
 
     def first_initialize_players(self):
-        players_names = [player.name for player in self.players]
         for player in self.players:
-            player.first_initialize(players_names, self.deck.total_num_cards)
             player.set_trump_suit(self.trump_suit)
 
     def reset(self) -> StateType:
@@ -95,9 +89,6 @@ class DurakEnv:
     def initialize_deck(self):
         self.deck = Deck()
         self.deck.shuffle()
-        # trump_card = self.deck.draw()[0]
-        # self.trump_suit = trump_card[1]
-        # self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
@@ -148,11 +139,7 @@ class DurakEnv:
     def do_attack_phase(self):
         if self.last_action != self.deck.NO_CARD:
             self.attacking_cards.append(self.last_action)
-            for player in self.active_players:
-                player.update_round_progress(self.turn_player.name, self.last_action, True)
             self.attack_phase = False
-            # if self.turn_player.hand_size == 0:
-            #     self.reward = 1
         else:
             if self.turn_player == self.active_players[-1]:
                 self.defending = False
@@ -173,8 +160,6 @@ class DurakEnv:
     def do_defence_phase(self):
         if self.last_action != self.deck.NO_CARD:
             self.defending_cards.append(self.last_action)
-            for player in self.active_players:
-                player.update_round_progress(self.active_players[self.defender].name, self.last_action, False)
             self.attack_phase = True
             if len(self.attacking_cards) == len(self.defending_cards) == self.limit:
                 # successful defence
@@ -265,7 +250,7 @@ class DurakEnv:
 
     def calculate_average_change(self, for_trump=False):
         final_sum = 0
-        suits = [game.trump_suit] if for_trump else self.turn_player.get_others_suit
+        suits = [self.trump_suit] if for_trump else self.turn_player.get_others_suit
         for suit in suits:
             old_values = [card[0] for card in self.turn_player.last_hand if card[1] == suit]
             old = 0 if len(old_values) == 0 else sum(old_values) / len(old_values)
@@ -275,22 +260,13 @@ class DurakEnv:
         return final_sum
 
     def difference_in_trump_cards(self):
-        return len([c for c in self.turn_player.hand if c[1] == game.trump_suit]) - \
-               len([c for c in self.turn_player.last_hand if c[1] == game.trump_suit])
+        return len([c for c in self.turn_player.hand if c[1] == self.trump_suit]) - \
+               len([c for c in self.turn_player.last_hand if c[1] == self.trump_suit])
 
     def calculate_reward(self):
-        # weights = [1, 2, 2]  # used in order to give trumps changes higher priority
-        # weight_sum = weights[0] + weights[1] + weights[2]
-        # norm_weights = (weight_sum / float(weights[0] * 12),
-        #                 weight_sum / float(weights[1] * 12),
-        #                 weight_sum / float(weights[2] * self.turn_player.hand_size))
-        # norm_weights = weights / weight_sum
-        # TODO: check with vitaly if he got the selected trump out of the deck. if so -
-        #  change normalization of diff in trump card to 8
         suits_avg_change = self.calculate_average_change(for_trump=False) / 27
         trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
         diff_in_trump_cards = self.difference_in_trump_cards() / 9
-        # cards_in_hand = (len(self.turn_player.last_hand) - len(self.turn_player.hand)) / 36
 
         sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
         if self.turn_player.hand_size == 0:
@@ -300,11 +276,6 @@ class DurakEnv:
 
     def check_end_round(self):
         if not self.defending:
-            # if self.turn_player == self.active_players[self.defender]:
-            #     if self.successful:
-            #         self.reward = len(self.defending_cards)
-            #     else:
-            #         self.reward = -(len(self.attacking_cards) + len(self.defending_cards))
             self.reset_round = True
         else:
             if self.attack_phase and self.reset_attacker:
@@ -348,92 +319,3 @@ class DurakEnv:
         if self.turn_player == self.active_players[self.defender]:
             return set(self.turn_player.hand).intersection(set(self.state[3]))
         return set(self.turn_player.hand).intersection(set(self.state[2]))
-
-# proper running of a durak game from the environment:
-num_games = 1500
-player1 = NFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player")
-# player1 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save1.torch')
-# player2 = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
-player2 = RandomPlayer(DurakEnv.HAND_SIZE, "NFSP-a Player")
-game = DurakEnv([player1, player2], False)
-game_num = 0
-lost = 0
-tie = 0
-for game_index in range(num_games):
-    state = game.reset()
-    game.render()
-    while True:
-        turn_player = game.get_turn_player()
-        to_attack = game.to_attack()
-        act = turn_player.get_action(state, to_attack)
-        new_state, reward, done, info = game.step(act)
-        if isinstance(turn_player, LearningPlayer):
-            turn_player.learn_step(state, new_state, act, reward, info)
-        state = new_state
-        game.render()
-        if done:
-            break
-    loser = game.get_loser()
-    game_num += 1
-    if loser and loser is player1:
-        lost += 1
-    if not loser:
-        tie += 1
-    if game_num % 100 == 0:
-        to_print = 'batch-'+str(game_num / 100)+': winnings = ' + str((100-lost-tie) / 100) + ', tie = ' + str(tie)
-        print(to_print)
-        lost = 0
-        tie = 0
-
-# player1.save_network('save1.torch')
-# player2.save_network('save2.torch')
-loser = game.get_loser()
-if loser is not None:
-    print(loser.name, "lost")
-    # else:
-    #     print("ended in a tie")
-print('done')
-
-
-
-
-# num_games = 1
-# player = TrainedNFSPPlayer(DurakEnv.HAND_SIZE, "NFSP Player", 'save.torch')
-# # player2 = RandomPlayer(DurakEnv.HAND_SIZE, "Random Player")
-# player2 = HumanPlayer(DurakEnv.HAND_SIZE, "Random Player")
-# game = DurakEnv([player, player2], False)
-# game_num = 0
-# lost = 0
-# tie = 0
-# for game_index in range(num_games):
-#     state = game.reset()
-#     game.render()
-#     while True:
-#         turn_player = game.get_turn_player()
-#         to_attack = game.to_attack()
-#         act = turn_player.get_action(state, to_attack)
-#         new_state, reward, done, info = game.step(act)
-#         if isinstance(turn_player, LearningPlayer):
-#             turn_player.learn_step(state, new_state, act, reward, info)
-#         state = new_state
-#         game.render()
-#         if done:
-#             break
-#     loser = game.get_loser()
-#     game_num += 1
-#     if loser and loser.name == 'NFSP Player':
-#         lost += 1
-#     if not loser:
-#         tie += 1
-#     if game_num % 100 == 0:
-#         to_print = 'batch-'+str(game_num / 100)+': winnings = ' + str((100-lost-tie) / 100) + ', tie = ' + str(tie)
-#         print(to_print)
-#         lost = 0
-#         tie = 0
-#
-# loser = game.get_loser()
-# if loser is not None:
-#     print(loser.name, "lost")
-# else:
-#     print("ended in a tie")
-# print('done')
