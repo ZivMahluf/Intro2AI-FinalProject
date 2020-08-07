@@ -1,9 +1,8 @@
 import numpy as np
 import random
 import math
-
-from collections import deque
 import itertools
+from collections import deque
 
 
 class ReplayBuffer(object):
@@ -38,13 +37,13 @@ class ReservoirBuffer(object):
         reservoir = list(itertools.islice(self.buffer, 0, batch_size))
         threshold = batch_size * 4
         idx = batch_size
-        while (idx < n and idx <= threshold):
+        while idx < n and idx <= threshold:
             m = random.randint(0, idx)
             if m < batch_size:
                 reservoir[m] = self.buffer[idx]
             idx += 1
 
-        while (idx < n):
+        while idx < n:
             p = float(batch_size) / idx
             u = random.random()
             g = math.floor(math.log(u) / math.log(1 - p))

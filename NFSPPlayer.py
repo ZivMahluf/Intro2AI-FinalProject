@@ -1,30 +1,17 @@
-import pathlib
-from LearningPlayer import LearningPlayer
 import math as m
 from NFSPModel import DQN, Policy
-from collections import deque
-import numpy as np
 import random
 import os
-import time
 import torch.nn.functional as F
 import torch.optim as optim
 import torch
-from LearningPlayer import *
-from NFSPStorage import *
+from NFSPStorage import ReplayBuffer, ReservoirBuffer
+from DurakPlayer import DurakPlayer
+from Deck import Deck
+from typing import Tuple, List, Optional
 
 
-class NFSPPlayer(LearningPlayer):
-    def __init__(self, hand_size, name, env):
-        super().__init__(hand_size, name)
-        self.__env = env
-
-
-# from common.utils import update_target, print_log, load_model, save_model
-#from storage import ReplayBuffer, ReservoirBuffer
-
-
-class NFSPPlayer(LearningPlayer):
+class NFSPPlayer(DurakPlayer):
 
     @staticmethod
     def action_to_card(network_output: int):
@@ -32,7 +19,7 @@ class NFSPPlayer(LearningPlayer):
             return -1, -1
         return network_output % 9 + 6, int(network_output / 9)
 
-    def __init__(self, hand_size, name, device='cpu'): # cude for gpu
+    def __init__(self, hand_size, name, device='cpu'):  # cuda for gpu
         # todo pick storage size that is large enough
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
@@ -58,6 +45,7 @@ class NFSPPlayer(LearningPlayer):
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
+        self.gamma = 0.99
         self.eta = 0.1  # todo : pick eta 0.1 experience 0.3
         self.eps_start = 0.9  # 0.9 paper 0.06 check which epsilon function to use
         self.eps_final = 0.0001  # 0
@@ -80,8 +68,7 @@ class NFSPPlayer(LearningPlayer):
             action = self.policy.act(torch.FloatTensor(state).to(self.device), legal_cards_vec)
         else:
             self.is_best_response = True
-            action = self.current_model.act(torch.FloatTensor(
-                state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
+            action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
         if self.is_best_response:
             self.reservoir_buffer.push(state, action)
 
@@ -98,7 +85,7 @@ class NFSPPlayer(LearningPlayer):
         hand_vec = NFSPPlayer.get_cards_as_vector(hand)
         not_possible_card_vec = discard_pile
         state = legal_cards_vec + attacking_cards_vec + \
-                defending_cards_vec + hand_vec + not_possible_card_vec
+            defending_cards_vec + hand_vec + not_possible_card_vec
         return legal_cards_vec, state
 
     @staticmethod
@@ -209,8 +196,7 @@ class NFSPPlayer(LearningPlayer):
         Update current_model neural network
         """
         batch_size = min(self.batch_size, len(self.replay_buffer))
-        state, action, reward, next_state, done = self.replay_buffer.sample(
-            batch_size)
+        state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
         weights = torch.ones(batch_size).to(self.device)
 
         state = torch.FloatTensor(state).to(self.device)
@@ -227,7 +213,7 @@ class NFSPPlayer(LearningPlayer):
         q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
         next_q_value = target_next_q_values.max(1)[0]
         # todo fix expected q-value
-        expected_q_value = reward + next_q_value
+        expected_q_value = reward + (self.gamma ** self.round) * next_q_value
 
         # Huber Loss
         loss = F.smooth_l1_loss(

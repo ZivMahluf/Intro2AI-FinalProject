@@ -205,10 +205,7 @@ class Policy(DQNBase):
             nn.Softmax(dim=1),
         )
 
-
-
-
-    def act(self, state, legal_cards: List[int]):
+    def act(self, state, legal_cards):
         """
         Parameters
         ----------

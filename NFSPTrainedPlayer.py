@@ -1,19 +1,9 @@
-import pathlib
-
-from LearningPlayer import LearningPlayer
-import math as m
 from NFSPModel import DQN, Policy
-from collections import deque
-import numpy as np
-import random
 import os
-import time
-import torch.nn.functional as F
-import torch.optim as optim
 import torch
-from LearningPlayer import *
-from NFSPStorage import *
-from NFSPPlayer import *
+from NFSPPlayer import NFSPPlayer
+from typing import Tuple, List, Optional
+from Deck import Deck
 
 
 class TrainedNFSPPlayer(NFSPPlayer):
@@ -33,19 +23,10 @@ class TrainedNFSPPlayer(NFSPPlayer):
         self.current_model.load_state_dict(checkpoint['model'])
         self.policy.load_state_dict(checkpoint['policy'])
 
-
-    def learn(self, prev_table: Tuple[List[Deck.CardType], List[Deck.CardType]], prev_action: Deck.CardType,
-              reward: float, next_table: Tuple[List[Deck.CardType], List[Deck.CardType]]) -> None:
-        pass
-
-    def batch_learn(self, batch: List[Tuple[Tuple[List[Deck.CardType], List[Deck.CardType]], Deck.CardType, Union[int, float], Tuple[List[Deck.CardType], List[Deck.CardType]]]]):
-        pass
-
     def learn_step(self, old_state, new_state, action, reward, info):
         pass
 
-    def act(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
-               legal_cards_to_play: List[Deck.CardType]):
+    def act(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]):
         legal_cards_vec, state = NFSPPlayer.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         card = NFSPPlayer.action_to_card(self.policy.act(torch.FloatTensor(state), legal_cards_vec))
         if card[0] != -1:
