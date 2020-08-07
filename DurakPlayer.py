@@ -48,9 +48,21 @@ class DurakPlayer:
         return self.defend((state[0], state[1]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
 
     def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+        """
+        Attacks with a legal card.
+        :param table: A tuple (attacking_cards, defending_cards) of cards on the table.
+        :param legal_cards_to_play: A list of legal cards to play, consisting of cards in the player's hand and might also include Deck.NO_CARD.
+        :return: The card with which the player attacks (the card is removed from the hand), or Deck.NO_CARD if the player does not attack with any card.
+        """
         raise NotImplementedError()
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+        """
+        Defends with a legal card.
+        :param table: A tuple (attacking_cards, defending_cards) of cards on the table.
+        :param legal_cards_to_play: A list of legal cards to play, consisting of cards in the player's hand, and Deck.NO_CARD.
+        :return: The card with which the player defends (the card is removed from the hand), or Deck.NO_CARD if the player does not defend with any card.
+        """
         raise NotImplementedError()
 
     def is_starting_hand_legal(self) -> bool:
@@ -86,110 +98,39 @@ class DurakPlayer:
         :return: The value of the lowest card with a trump suit, or Deck.NO_CARD is no card has a trump suit in the hand.
         """
         min_trump = np.inf
-        for value, series in self._hand:
-            if series == self._trump_suit:
+        for value, suit in self._hand:
+            if suit == self._trump_suit:
                 if min_trump == Deck.NO_CARD or value < min_trump:
                     min_trump = value
         return min_trump
 
-    def get_weakest_card(self, legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
+    def get_weakest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
         """
         Chooses the weakest card from the given list of cards.
-        The weakest card is the card with the lowest value. Any trump card has a higher value than any non-trump card.
-        :param legal_cards_to_play: A list of available cards to choose from (might include Deck.NO_CARD).
-        :return: The card with the lowest value from the legal cards.
+        The weakest card is the card with the lowest value.
+        Deck.NO_CARD has a value of (infinity), non-trump cards' value is (card_value), trump cards' value is (Deck.ACE + card_value).
+        :param cards: A list of cards to choose from (might include Deck.NO_CARD).
+        :return: The weakest card in the list.
         """
 
-        def __sort_legal_cards(x):
-            """
-            Give all cards priority over Deck.NO_CARD
-            :param x: a card
-            :return: the number of the card, or inf if Deck.NO_CARD
-            """
-            return x[0] if x != Deck.NO_CARD else np.inf
+        def get_card_value(card: Deck.CardType) -> int:
+            if card == Deck.NO_CARD:
+                return np.inf
+            else:
+                value = card[0]
+                if card[1] == self._trump_suit:
+                    value += Deck.ACE
+                return value
 
-        if len(legal_cards_to_play) == 0:
-            return Deck.NO_CARD
+        weakest = cards[0]
+        min_val = get_card_value(weakest)
+        for c in cards[1:]:
+            val = get_card_value(c)
+            if val < min_val:
+                min_val = val
+                weakest = c
 
-        # sort cards by number
-        legal_cards_to_play.sort(key=__sort_legal_cards)
-
-        # if the lowest card is Deck.NO_CARD, it means that all legal moves are Deck.NO_CARD, since all other cards should appear before
-        if legal_cards_to_play[0] == Deck.NO_CARD:
-            return Deck.NO_CARD
-
-        # if all cards are trumps or no cards, pick first
-        # otherwise, pick first non-trump
-        lowest_card = Deck.NO_CARD
-        for card in legal_cards_to_play:
-            if card != Deck.NO_CARD:
-                value, suit = card
-                if suit != self._trump_suit:
-                    lowest_card = card
-                    break
-
-        if lowest_card == Deck.NO_CARD:
-            # no non-trump card found, so return first trump card
-            self._hand.remove(legal_cards_to_play[0])
-            return legal_cards_to_play[0]
-        else:
-            self._hand.remove(lowest_card)
-            return lowest_card
-
-    def get_strongest_card(self, legal_cards_to_play: List[Deck.CardType]) -> Deck.CardType:
-        """
-        Chooses the strongest non-trump card from the given list of cards.
-        The strongest card is the card with the highest value. Any trump card has a higher value than any non-trump card.
-        :param legal_cards_to_play: A list of available cards to choose from (might include Deck.NO_CARD).
-        :return: The card with the highest value from the legal cards.
-        """
-
-        def __sort_legal_cards(x):
-            """
-            Give all cards priority over Deck.NO_CARD
-            :param x: a card
-            :return: the number of the card, or 0 if Deck.NO_CARD
-            """
-            if x == Deck.NO_CARD:
-                return 0
-            return x[0]
-
-        if len(legal_cards_to_play) == 0:
-            return Deck.NO_CARD
-
-        # sort cards by number (highest number first)
-        legal_cards_to_play.sort(key=__sort_legal_cards, reverse=True)
-
-        # if the lowest card is Deck.NO_CARD, it means that all legal moves are Deck.NO_CARD, since all other cards should appear before
-        if legal_cards_to_play[0] == Deck.NO_CARD:
-            return Deck.NO_CARD
-
-        # if all cards are trumps or no cards, pick first
-        # otherwise, pick first non-trump
-        highest_card = Deck.NO_CARD
-        for card in legal_cards_to_play:
-            if card != Deck.NO_CARD:
-                value, suit = card
-                if suit != self._trump_suit:
-                    highest_card = card
-                    break
-
-        if highest_card == Deck.NO_CARD:
-            # no non-trump card found, so return first trump card
-            self._hand.remove(legal_cards_to_play[0])
-            return legal_cards_to_play[0]
-        else:
-            self._hand.remove(highest_card)
-            return highest_card
-
-    def update_round_progress(self, player_name: str, played_card: Deck.CardType, attack: bool) -> None:
-        """
-        Updates the agent about a card that was played by a player.
-        :param player_name: Name of the player that played.
-        :param played_card: The card played by that player.
-        :param attack: Weather the card was played as part of an attack.
-        """
-        pass
+        return weakest
 
     def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                          successfully_defended: bool) -> None:
@@ -202,9 +143,6 @@ class DurakPlayer:
         pass
 
     def set_gui(self, gui):
-        pass
-
-    def first_initialize(self, players_names, full_deck_size) -> None:
         pass
 
     def initialize_for_game(self) -> None:
