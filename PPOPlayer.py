@@ -14,6 +14,9 @@ class PPOPlayer(DurakPlayer):
         self.last_converted_state = None
         self.last_converted_available_cards = None
 
+        self.value = 0
+        self.neglogpac = 0
+
         if training_network:
             self.test_phase = False
             self.training_network = training_network  # this will be done in the training phase
@@ -48,7 +51,7 @@ class PPOPlayer(DurakPlayer):
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
         self.last_converted_available_cards = converted_available_cards
-        action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
+        action, self.value, self.neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
@@ -57,7 +60,7 @@ class PPOPlayer(DurakPlayer):
 
         if self.test_phase:
             return action
-        return action, value, neglogpac
+        return action
 
     def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
@@ -66,14 +69,17 @@ class PPOPlayer(DurakPlayer):
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
         self.last_converted_available_cards = converted_available_cards
-        action, value, neglogpac = self.training_network.step(converted_state, converted_available_cards)
+        action, self.value, self.neglogpac = self.training_network.step(converted_state, converted_available_cards)
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
 
         if self.test_phase:
             return action
-        return action, value, neglogpac
+        return action
+
+    def get_val_neglogpac(self):
+        return self.value, self.neglogpac
 
     def convert_input(self, input):
         # the input contains: hand, attacking_cards, defending_cards, memory, legal_cards_to_play
