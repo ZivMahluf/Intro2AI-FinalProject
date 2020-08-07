@@ -5,6 +5,10 @@ import random
 
 class HumanPlayer(DurakPlayer):
 
+    """
+    A human player attacks and defends through a GUI with which they interact. If not GUI is defined for some reason, the player will act randomly.
+    """
+
     def __init__(self, hand_size: int, name: str):
         """
         Constructor.
@@ -17,8 +21,8 @@ class HumanPlayer(DurakPlayer):
 
     def set_gui(self, gui) -> None:
         """
-        Sets the gui with which the human player interacts. If the gui is not set, the human player will act like a random player.
-        :param gui: The gui for the human player.
+        Sets the gui with which the human player interacts.
+        :param gui: The gui for the human player to interact with.
         """
         self.__game_gui = gui
         self.__set_gui = True
