@@ -1,6 +1,6 @@
 from itertools import product
 import numpy as np
-from typing import NewType, Tuple, List
+from typing import Tuple, List
 
 
 class Deck:
