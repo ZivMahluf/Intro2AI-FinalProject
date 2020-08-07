@@ -32,11 +32,12 @@ class PPOTrainer(object):
 
         tf.compat.v1.global_variables_initializer().run(session=sess)
 
+        self.players = [PPOPlayer(DurakEnv.HAND_SIZE, "PPO 0", self.playerNetworks[1]),
+                        PPOPlayer(DurakEnv.HAND_SIZE, "PPO 1", self.playerNetworks[2]),
+                        PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
+                        PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])]
         # environment
-        game = DurakEnv([PPOPlayer(DurakEnv.HAND_SIZE, "PPO 0", self.playerNetworks[1]),
-                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 1", self.playerNetworks[2]),
-                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
-                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])], False)
+        game = DurakEnv(self.players, False)
         self.state = game.reset()
         self.vectorizedGame = game
 
@@ -83,7 +84,8 @@ class PPOTrainer(object):
         while not done:
             turn_player = game.get_turn_player()
             available_actions = game.get_available_actions()
-            action, value, neglogpac = turn_player.get_action(state, game.to_attack())
+            action = turn_player.get_action(state, game.to_attack())
+            value, neglogpac = turn_player.get_val_neglogpac()
             new_state, reward, done, info = game.step(action)  # update the game
 
             # add to list
@@ -205,15 +207,29 @@ class PPOTrainer(object):
                 joblib.dump(self.losses, "losses.pkl")
                 joblib.dump(self.epInfos, "epInfos.pkl")
 
+    def test(self, games):
+        losses = {player.name: 0 for player in self.players}  # for loss ratios
+        for i in range(games):
+            print('test game', i + 1)
+            state = self.vectorizedGame.reset()
+            self.vectorizedGame.render()
+            while True:
+                turn_player = self.vectorizedGame.get_turn_player()
+                to_attack = self.vectorizedGame.to_attack()
+                act = turn_player.get_action(state, to_attack)
+                state, _, done, _ = self.vectorizedGame.step(act)
+                self.vectorizedGame.render()
+                if done:
+                    break
+            loser = self.vectorizedGame.get_loser()
+            if loser is not None and loser.name in losses:
+                losses[loser.name] += 1
+        for name in losses:
+            losses[name] /= games
+        return losses
 
-if __name__ == "__main__":
-    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
+    def get_players(self):
+        return self.players
 
-    with tf.compat.v1.Session() as sess:
-        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=2)
-        start = time.time()
-        mainSim.train(500)
-        end = time.time()
-        logging.info("Time Taken: %f" % (end - start))
-
-    logging.shutdown()
+    def get_learning_players_names(self):
+        return [player.name for player in self.players]
