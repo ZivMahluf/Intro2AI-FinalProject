@@ -38,7 +38,7 @@ class DurakEnv:
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
-        self.trump_rank = self.deck.HEARTS
+        self.trump_suit = self.deck.HEARTS
         self.defending = True
         self.successful = False
         self.limit = 0
@@ -53,7 +53,7 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
-            player.set_trump_rank(self.trump_rank)
+            player.set_trump_suit(self.trump_suit)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -67,7 +67,7 @@ class DurakEnv:
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
-        self.trump_rank = self.deck.HEARTS
+        self.trump_suit = self.deck.HEARTS
         self.defending = True
         self.successful = False
         self.limit = 0
@@ -96,13 +96,13 @@ class DurakEnv:
         self.deck = Deck()
         self.deck.shuffle()
         # trump_card = self.deck.draw()[0]
-        # self.trump_rank = trump_card[1]
+        # self.trump_suit = trump_card[1]
         # self.deck.to_bottom(trump_card)
 
     def reset_hands(self):
         for player in self.active_players:
             player.empty_hand()
-            player.set_trump_rank(self.trump_rank)
+            player.set_trump_suit(self.trump_suit)
 
     def deal_cards(self):
         for player in self.active_players:
@@ -256,7 +256,7 @@ class DurakEnv:
                 if len(self.attacking_cards) > len(self.defending_cards):
                     if card not in self.defending_cards:
                         if (card[1] == self.attacking_cards[-1][1] and card[0] > self.attacking_cards[-1][0]) or \
-                                ((card[1] == self.trump_rank) and (self.attacking_cards[-1][1] != self.trump_rank)):
+                                ((card[1] == self.trump_suit) and (self.attacking_cards[-1][1] != self.trump_suit)):
                             self.legal_defending_cards.append(card)
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
 
@@ -265,18 +265,18 @@ class DurakEnv:
 
     def calculate_average_change(self, for_trump=False):
         final_sum = 0
-        ranks = [game.trump_rank] if for_trump else self.turn_player.get_others_rank
-        for rank in ranks:
-            old_values = [card[0] for card in self.turn_player.last_hand if card[1] == rank]
+        suits = [game.trump_suit] if for_trump else self.turn_player.get_others_suit
+        for suit in suits:
+            old_values = [card[0] for card in self.turn_player.last_hand if card[1] == suit]
             old = 0 if len(old_values) == 0 else sum(old_values) / len(old_values)
-            new_values = [card[0] for card in self.turn_player.hand if card[1] == rank]
+            new_values = [card[0] for card in self.turn_player.hand if card[1] == suit]
             curr = 0 if len(new_values) == 0 else sum(new_values) / len(new_values)
             final_sum += (curr - old)
         return final_sum
 
     def difference_in_trump_cards(self):
-        return len([c for c in self.turn_player.hand if c[1] == game.trump_rank]) - \
-               len([c for c in self.turn_player.last_hand if c[1] == game.trump_rank])
+        return len([c for c in self.turn_player.hand if c[1] == game.trump_suit]) - \
+               len([c for c in self.turn_player.last_hand if c[1] == game.trump_suit])
 
     def calculate_reward(self):
         # weights = [1, 2, 2]  # used in order to give trumps changes higher priority
@@ -287,12 +287,12 @@ class DurakEnv:
         # norm_weights = weights / weight_sum
         # TODO: check with vitaly if he got the selected trump out of the deck. if so -
         #  change normalization of diff in trump card to 8
-        ranks_avg_change = self.calculate_average_change(for_trump=False) / 27
+        suits_avg_change = self.calculate_average_change(for_trump=False) / 27
         trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
         diff_in_trump_cards = self.difference_in_trump_cards() / 9
         # cards_in_hand = (len(self.turn_player.last_hand) - len(self.turn_player.hand)) / 36
 
-        sum_all = (0.4 * ranks_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
+        sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
         if self.turn_player.hand_size == 0:
             sum_all += 80
 
@@ -322,7 +322,7 @@ class DurakEnv:
             defender = self.active_players[self.defender] if len(self.active_players) >= self.MIN_PLAYERS else None
             self.gui.show_screen(self.players, (self.attacking_cards, self.defending_cards),
                                  attacker, defender,
-                                 self.deck, self.trump_rank)
+                                 self.deck, self.trump_suit)
 
     def game_over(self):
         return len(self.active_players) < self.MIN_PLAYERS

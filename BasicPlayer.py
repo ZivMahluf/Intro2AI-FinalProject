@@ -27,11 +27,11 @@ class BasicPlayer(DurakPlayer):
                 choose_from.remove(Deck.NO_CARD)
             chose_card = choose_from[0]
             for card in choose_from[1:]:
-                value, rank = card
-                if (self._trump_rank not in [rank, chose_card[1]]) or ((rank == self._trump_rank) and (chose_card[1] == self._trump_rank)):
+                value, suit = card
+                if (self._trump_suit not in [suit, chose_card[1]]) or ((suit == self._trump_suit) and (chose_card[1] == self._trump_suit)):
                     if value < chose_card[0]:
                         chose_card = card
-                elif chose_card[1] == self._trump_rank:
+                elif chose_card[1] == self._trump_suit:
                     chose_card = card
         if chose_card != Deck.NO_CARD:
             self._hand.remove(chose_card)

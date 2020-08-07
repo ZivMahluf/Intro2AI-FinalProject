@@ -40,7 +40,7 @@ class DurakEnv:
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
-        self.trump_rank = self.deck.HEARTS
+        self.trump_suit = self.deck.HEARTS
         self.defending = True
         self.successful = False
         self.limit = 0
@@ -55,7 +55,7 @@ class DurakEnv:
         players_names = [player.name for player in self.players]
         for player in self.players:
             player.first_initialize(players_names, self.deck.total_num_cards)
-            player.set_trump_rank(self.trump_rank)
+            player.set_trump_suit(self.trump_suit)
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
@@ -69,7 +69,7 @@ class DurakEnv:
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
         self.gui = GUI() if self.to_render else None
         self.deck = Deck()
-        self.trump_rank = self.deck.HEARTS
+        self.trump_suit = self.deck.HEARTS
         self.defending = True
         self.successful = False
         self.limit = 0
@@ -253,7 +253,7 @@ class DurakEnv:
                 if len(self.attacking_cards) > len(self.defending_cards):
                     if card not in self.defending_cards:
                         if (card[1] == self.attacking_cards[-1][1] and card[0] > self.attacking_cards[-1][0]) or \
-                                ((card[1] == self.trump_rank) and (self.attacking_cards[-1][1] != self.trump_rank)):
+                                ((card[1] == self.trump_suit) and (self.attacking_cards[-1][1] != self.trump_suit)):
                             self.legal_defending_cards.append(card)
         self.state = (self.attacking_cards, self.defending_cards, self.legal_attacking_cards, self.legal_defending_cards)
 
@@ -284,7 +284,7 @@ class DurakEnv:
             defender = self.active_players[self.defender] if len(self.active_players) >= self.MIN_PLAYERS else None
             self.gui.show_screen(self.players, (self.attacking_cards, self.defending_cards),
                                  attacker, defender,
-                                 self.deck, self.trump_rank)
+                                 self.deck, self.trump_suit)
 
     def game_over(self):
         return len(self.active_players) < self.MIN_PLAYERS

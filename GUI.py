@@ -46,27 +46,27 @@ class GUI:
         self.__card_size = None
         for card in deck:
             if card[0] < Deck.JACK:
-                self.__card_images[card] = pygame.image.load(os.path.join("Images", str(card[0]) + Deck.STRING_RANKS[card[1]] + ".png"))
+                self.__card_images[card] = pygame.image.load(os.path.join("Images", str(card[0]) + Deck.STRING_SUITS[card[1]] + ".png"))
             elif card[0] == Deck.JACK:
-                self.__card_images[card] = pygame.image.load(os.path.join("Images", "J" + Deck.STRING_RANKS[card[1]] + ".png"))
+                self.__card_images[card] = pygame.image.load(os.path.join("Images", "J" + Deck.STRING_SUITS[card[1]] + ".png"))
             elif card[0] == Deck.QUEEN:
-                self.__card_images[card] = pygame.image.load(os.path.join("Images", "Q" + Deck.STRING_RANKS[card[1]] + ".png"))
+                self.__card_images[card] = pygame.image.load(os.path.join("Images", "Q" + Deck.STRING_SUITS[card[1]] + ".png"))
             elif card[0] == Deck.KING:
-                self.__card_images[card] = pygame.image.load(os.path.join("Images", "K" + Deck.STRING_RANKS[card[1]] + ".png"))
+                self.__card_images[card] = pygame.image.load(os.path.join("Images", "K" + Deck.STRING_SUITS[card[1]] + ".png"))
             else:
-                self.__card_images[card] = pygame.image.load(os.path.join("Images", "A" + Deck.STRING_RANKS[card[1]] + ".png"))
+                self.__card_images[card] = pygame.image.load(os.path.join("Images", "A" + Deck.STRING_SUITS[card[1]] + ".png"))
             if self.__card_size is None:
                 self.__card_size = self.__card_images[card].get_size()
-        self.__rank_images = dict()
-        for rank in Deck.RANKS:
-            if rank == Deck.HEARTS:
-                self.__rank_images[rank] = pygame.image.load(os.path.join("Images", "Hearts.png"))
-            elif rank == Deck.CLUBS:
-                self.__rank_images[rank] = pygame.image.load(os.path.join("Images", "Clubs.png"))
-            elif rank == Deck.DIAMONDS:
-                self.__rank_images[rank] = pygame.image.load(os.path.join("Images", "Diamonds.png"))
-            elif rank == Deck.SPADES:
-                self.__rank_images[rank] = pygame.image.load(os.path.join("Images", "Spades.png"))
+        self.__suit_images = dict()
+        for suit in Deck.SUITS:
+            if suit == Deck.HEARTS:
+                self.__suit_images[suit] = pygame.image.load(os.path.join("Images", "Hearts.png"))
+            elif suit == Deck.CLUBS:
+                self.__suit_images[suit] = pygame.image.load(os.path.join("Images", "Clubs.png"))
+            elif suit == Deck.DIAMONDS:
+                self.__suit_images[suit] = pygame.image.load(os.path.join("Images", "Diamonds.png"))
+            elif suit == Deck.SPADES:
+                self.__suit_images[suit] = pygame.image.load(os.path.join("Images", "Spades.png"))
         self.__table_image = pygame.image.load(os.path.join("Images", "Table.png"))
         self.__back_of_card_image = pygame.image.load(os.path.join("Images", "ZCardBack.png"))
 
@@ -82,7 +82,7 @@ class GUI:
         self.__deck_initial_pos = (self.__side_length // 2 - self.__card_size[0] // 2, self.__side_length // 2 + self.__card_size[1] // 2)
 
     def show_screen(self, players: List[DurakPlayer], table: Tuple[Union[list, List[Deck.CardType]], Union[list, List[Deck.CardType]]],
-                    attacker: Union[DurakPlayer, None], defender: Union[DurakPlayer, None], deck: Deck, trump_rank: int) -> None:
+                    attacker: Union[DurakPlayer, None], defender: Union[DurakPlayer, None], deck: Deck, trump_suit: int) -> None:
         """
         Shows the current state of the game.
         :param players: A list of the players in the game.
@@ -90,11 +90,11 @@ class GUI:
         :param attacker: The attacking player.
         :param defender: The defending player.
         :param deck: The deck object used by the game.
-        :param trump_rank: The trump rank in the game.
+        :param trump_suit: The trump suit in the game.
         """
         self.__screen.fill((0, 0, 0))
         self.__screen.blit(self.__table_image, (0, 0))
-        self.__screen.blit(self.__rank_images[trump_rank], (0, 0))
+        self.__screen.blit(self.__suit_images[trump_suit], (0, 0))
         self.__human_player_cards_positions = list()
 
         # Show pass button

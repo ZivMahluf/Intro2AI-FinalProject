@@ -12,8 +12,8 @@ class DurakPlayer:
         :param name: Name of the player.
         """
         self._hand = []
-        self._trump_rank = None
-        self._other_ranks = None
+        self._trump_suit = None
+        self._other_suits = None
         self.__initial_hand_size = hand_size
         self.__name = name
         self.last_hand = []
@@ -25,15 +25,15 @@ class DurakPlayer:
         """
         self._hand.extend(cards)
 
-    def set_trump_rank(self, rank: int) -> None:
+    def set_trump_suit(self, suit: int) -> None:
         """
-        Sets the trump rank as the given rank.
-        :param rank: Rank to set as trump rank.
+        Sets the trump suit as the given suit.
+        :param suit: suit to set as trump suit.
         """
-        self._trump_rank = rank
-        ranks = Deck.RANKS.copy()
-        ranks.remove(rank)
-        self._other_ranks = ranks
+        self._trump_suit = suit
+        suits = Deck.SUITS.copy()
+        suits.remove(suit)
+        self._other_suits = suits
 
     def get_action(self, state, to_attack):
         """
@@ -55,26 +55,23 @@ class DurakPlayer:
 
     def is_starting_hand_legal(self) -> bool:
         """
-        A legal starting hand is one in which there are at most (initial hand size - 2) cards of each rank, and there is at least one 'red'
-        card (hearts or diamonds), and one 'black' card (spades or clubs).
+        A legal starting hand is one in which there are at most (initial hand size - 2) cards of each suit.
         :return: Weather the cards in the hand form a legal starting hand.
         """
         num_hearts = 0
         num_diamonds = 0
         num_spades = 0
         num_clubs = 0
-        for _, rank in self._hand:
-            if rank == Deck.HEARTS:
+        for _, suit in self._hand:
+            if suit == Deck.HEARTS:
                 num_hearts += 1
-            elif rank == Deck.DIAMONDS:
+            elif suit == Deck.DIAMONDS:
                 num_diamonds += 1
-            elif rank == Deck.SPADES:
+            elif suit == Deck.SPADES:
                 num_spades += 1
             else:
                 num_clubs += 1
-        if ((self.__initial_hand_size - 1) in [num_hearts, num_diamonds, num_spades, num_clubs]) or \
-                ((num_hearts + num_diamonds) == self.__initial_hand_size) or \
-                ((num_spades + num_clubs) == self.__initial_hand_size):
+        if (self.__initial_hand_size - 1) in [num_hearts, num_diamonds, num_spades, num_clubs]:
             return False
         return True
 
@@ -82,15 +79,15 @@ class DurakPlayer:
         """
         Empties the current hand.
         """
-        self._hand = []
+        self._hand = list()
 
     def get_lowest_trump(self) -> int:
         """
-        :return: The value of the lowest card with a trump rank, or Deck.NO_CARD is no card has a trump rank in the hand.
+        :return: The value of the lowest card with a trump suit, or Deck.NO_CARD is no card has a trump suit in the hand.
         """
         min_trump = np.inf
         for value, series in self._hand:
-            if series == self._trump_rank:
+            if series == self._trump_suit:
                 if min_trump == Deck.NO_CARD or value < min_trump:
                     min_trump = value
         return min_trump
@@ -126,8 +123,8 @@ class DurakPlayer:
         lowest_card = Deck.NO_CARD
         for card in legal_cards_to_play:
             if card != Deck.NO_CARD:
-                value, rank = card
-                if rank != self._trump_rank:
+                value, suit = card
+                if suit != self._trump_suit:
                     lowest_card = card
                     break
 
@@ -172,8 +169,8 @@ class DurakPlayer:
         highest_card = Deck.NO_CARD
         for card in legal_cards_to_play:
             if card != Deck.NO_CARD:
-                value, rank = card
-                if rank != self._trump_rank:
+                value, suit = card
+                if suit != self._trump_suit:
                     highest_card = card
                     break
 
@@ -211,14 +208,14 @@ class DurakPlayer:
         pass
 
     def initialize_for_game(self) -> None:
-        self._trump_rank = None
-        self._other_ranks = None
+        self._trump_suit = None
+        self._other_suits = None
         self.last_hand = []
         self._hand = []
 
     @property
-    def get_others_rank(self) -> List[int]:
-        return self._other_ranks
+    def get_others_suit(self) -> List[int]:
+        return self._other_suits
 
     @property
     def hand_size(self) -> int:

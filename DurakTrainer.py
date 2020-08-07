@@ -64,7 +64,7 @@ class DurakTrainer:
             hands_per_game = dict()
             for j, round_log in enumerate(game_log):
                 for i, record in enumerate(round_log):
-                    prev_state, prev_action, acting_player_name_hand, next_state, attacker_name, defender_name, cards_in_deck, player_hands, trump_rank = record
+                    prev_state, prev_action, acting_player_name_hand, next_state, attacker_name, defender_name, cards_in_deck, player_hands, trump_suit = record
                     # recording the cards in the hands of the learning agents during each round
                     for k, player in enumerate(all_players):
                         if player.name in self.hands_by_record_per_game:
@@ -79,7 +79,7 @@ class DurakTrainer:
                     # creating a tuple of (state, action, reward, next_state) if the acting player is a learning agent
                     if acting_player_name in self.training_data_per_player:
                         next_next_state = (list(), list()) if i == (len(round_log) - 1) else round_log[i + 1]
-                        reward = self.calculate_reward(len(round_log), i, prev_action, len(acting_player_hand), next_state, len(cards_in_deck), trump_rank, next_next_state)
+                        reward = self.calculate_reward(len(round_log), i, prev_action, len(acting_player_hand), next_state, len(cards_in_deck), trump_suit, next_next_state)
                         self.training_data_per_player[acting_player_name].append((prev_state, prev_action, reward, next_state))
             # adding the update arguments of the game to the record for training.
             self.update_args_by_game.append(update_args[:])
@@ -88,7 +88,7 @@ class DurakTrainer:
                 self.hands_by_record_per_game[player_name].append(hands_per_game[player_name][:])
 
     @staticmethod
-    def calculate_reward(round_log_length, index, prev_action, acting_player_hand_size, next_state, deck_size, trump_rank, next_next_state) -> Union[int, float]:
+    def calculate_reward(round_log_length, index, prev_action, acting_player_hand_size, next_state, deck_size, trump_suit, next_next_state) -> Union[int, float]:
         """
         Calculates a reward for the acting player based on the given parameters.
         :param round_log_length: Number of round actions in the round.
@@ -97,7 +97,7 @@ class DurakTrainer:
         :param acting_player_hand_size: Number of cards in the acting player's hand.
         :param next_state: The next state.
         :param deck_size: Number of remaining cards in the deck.
-        :param trump_rank: Trump rank of the game.
+        :param trump_suit: Trump suit of the game.
         :param next_next_state: The next_state field from the next entry in the log (only accessed if a next entry exists).
         :return: The calculated reward for the action.
         """
@@ -105,7 +105,7 @@ class DurakTrainer:
             reward = 50  # arbitrary high reward for winning
         elif index == 0:
             reward = -prev_action[0]
-            if prev_action[1] == trump_rank:
+            if prev_action[1] == trump_suit:
                 reward -= Deck.ACE
         elif index == (round_log_length - 1):
             if len(next_state[0]) == len(next_state[1]):
@@ -114,9 +114,9 @@ class DurakTrainer:
             else:
                 # defence unsuccessful (the defender is not the last player to act)
                 reward = prev_action[0]
-                if prev_action[1] == trump_rank and deck_size > 0:
+                if prev_action[1] == trump_suit and deck_size > 0:
                     reward *= 0.9  # penalty for giving a trump card to an opponent when there are still cards in the deck
-                if prev_action[1] == trump_rank and acting_player_hand_size > 0:
+                if prev_action[1] == trump_suit and acting_player_hand_size > 0:
                     reward *= 0.85  # penalty for giving a trump card to an opponent that doesn't empty the hand (meaning it might be used against the player)
         else:
             if prev_action in next_state[0]:
@@ -124,21 +124,21 @@ class DurakTrainer:
                 if len(next_next_state[0]) > len(next_state[0]):
                     # two or more attacks were made in a row - defence failed
                     reward = prev_action[0]
-                    if prev_action[1] == trump_rank and deck_size > 0:
+                    if prev_action[1] == trump_suit and deck_size > 0:
                         reward *= 0.9  # penalty for giving a trump card to an opponent when there are still cards in the deck
-                    if prev_action[1] == trump_rank and acting_player_hand_size > 0:
+                    if prev_action[1] == trump_suit and acting_player_hand_size > 0:
                         reward *= 0.85  # penalty for giving a trump card to an opponent that doesn't empty the hand (meaning it might be used against the player)
                 else:
                     # the defender defended against the previous attacking card
                     reward = -prev_action[0]
-                    if prev_action[1] == trump_rank and deck_size > 0:
+                    if prev_action[1] == trump_suit and deck_size > 0:
                         reward -= (prev_action[0] / 2)  # penalty for attacking with a trump card when the deck is not empty
-                    if prev_action[1] == trump_rank and acting_player_hand_size > 0:
+                    if prev_action[1] == trump_suit and acting_player_hand_size > 0:
                         reward -= (prev_action[0] / 2)  # penalty for attacking with a trump card when hand is not empty
             else:
                 # the last player defended
                 reward = prev_action[0]
-                if prev_action[1] == trump_rank and next_state[0][-1][1] != trump_rank:
+                if prev_action[1] == trump_suit and next_state[0][-1][1] != trump_suit:
                     reward *= 0.9  # penalty for defending with a trump card against a non-trump card
         return reward
 

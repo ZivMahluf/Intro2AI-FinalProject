@@ -26,11 +26,11 @@ class DurakLogic:
         return legal_attacking_cards
 
     @staticmethod
-    def get_legal_defending_cards(defender_hand: List[Deck.CardType], attacking_card: Deck.CardType, trump_rank: int) -> List[Deck.CardType]:
+    def get_legal_defending_cards(defender_hand: List[Deck.CardType], attacking_card: Deck.CardType, trump_suit: int) -> List[Deck.CardType]:
         """
         :param defender_hand: The cards in the defending player's hand.
         :param attacking_card: The card from which to defend.
-        :param trump_rank: The trump rank in the game.
+        :param trump_suit: The trump suit in the game.
         :return: List of cards from the defender's hand which can be used to defend from the attacking card, including no card.
         """
         legal_defending_cards = [Deck.NO_CARD]
@@ -38,6 +38,6 @@ class DurakLogic:
             if attacking_card[1] == card[1]:
                 if attacking_card[0] < card[0]:
                     legal_defending_cards.append(card)
-            elif (attacking_card[1] != trump_rank) and (card[1] == trump_rank):
+            elif (attacking_card[1] != trump_suit) and (card[1] == trump_suit):
                 legal_defending_cards.append(card)
         return legal_defending_cards

@@ -16,8 +16,8 @@ class Deck:
     CLUBS = 1
     DIAMONDS = 2
     SPADES = 3
-    STRING_RANKS = {HEARTS: "H", CLUBS: "C", DIAMONDS: "D", SPADES: "S"}
-    RANKS = [HEARTS, CLUBS, DIAMONDS, SPADES]
+    STRING_SUITS = {HEARTS: "H", CLUBS: "C", DIAMONDS: "D", SPADES: "S"}
+    SUITS = [HEARTS, CLUBS, DIAMONDS, SPADES]
     VALUES = [6, 7, 8, 9, 10, JACK, QUEEN, KING, ACE]
     NO_CARD = (-1, -1)
     """
@@ -78,7 +78,7 @@ class Deck:
         """
         :return: A list of all cards in a deck.
         """
-        return list(product(Deck.VALUES, Deck.RANKS))
+        return list(product(Deck.VALUES, Deck.SUITS))
 
     @staticmethod
     def get_index_from_card(card):

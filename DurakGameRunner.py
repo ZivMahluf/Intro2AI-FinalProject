@@ -25,7 +25,7 @@ class DurakRunner:
     # defender player (as a name)
     # the cards in the deck
     # the cards in all players' hands
-    # the trump rank of the game
+    # the trump suit of the game
     RecordType = Tuple[StateType, Deck.CardType, PlayerRecordType, StateType, str, str, List[Deck.CardType], List[List[Deck.CardType]], int]
     # A log of a round is a list of records of the round
     RoundLogType = List[RecordType]
@@ -44,7 +44,7 @@ class DurakRunner:
         self.active_players = list()
         self.losers = list()
         self.deck = Deck()
-        self.trump_rank = Deck.HEARTS
+        self.trump_suit = Deck.HEARTS
         self.game_logic = DurakLogic()
         self.game = 0
         self.round = 0
@@ -117,14 +117,14 @@ class DurakRunner:
         self.initialize_game()
         self.round = 1
         if self.render:
-            self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
+            self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_suit)
         while not self.game_over() and not self.quit_all:
             self.play_round()
             self.add_round_log_to_game_log()
         if not self.quit_all:
             self.first_game = False
             if self.render:
-                self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_rank)
+                self.gui.show_screen(self.players, (list(), list()), None, None, self.deck, self.trump_suit)
 
     def initialize_game(self) -> None:
         """
@@ -164,16 +164,16 @@ class DurakRunner:
         self.deck = Deck()
         self.deck.shuffle()
         trump_card = self.deck.draw()[0]
-        self.trump_rank = trump_card[1]
+        self.trump_suit = trump_card[1]
         self.deck.to_bottom(trump_card)
 
     def reset_hands(self) -> None:
         """
-        Empties the hands of all players, and sets the current trump rank for them.
+        Empties the hands of all players, and sets the current trump suit for them.
         """
         for player in self.active_players:
             player.empty_hand()
-            player.set_trump_rank(self.trump_rank)
+            player.set_trump_suit(self.trump_suit)
 
     def deal_cards(self) -> bool:
         """
@@ -234,7 +234,7 @@ class DurakRunner:
             print('round', self.round, '(game ' + str(self.game) + ')')
         self.reset_round_parameters()
         if self.render:
-            self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+            self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_suit)
         while not self.check_quit_from_gui() and self.defending:
             self.do_attack_phase()
             self.do_defence_phase()
@@ -295,14 +295,14 @@ class DurakRunner:
             self.add_record_to_round_log()
             self.update_players_attack()
             if self.render:
-                self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+                self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_suit)
 
     def do_defence_phase(self) -> None:
         """
         The defending player defends as needed from the last attacking card.
         """
         if self.defending:
-            legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_rank)
+            legal_defending_cards = self.game_logic.get_legal_defending_cards(self.active_players[self.defender].hand, self.attacking_card, self.trump_suit)
             self.defending_card = self.active_players[self.defender].defend(self.table, legal_defending_cards)
             self.last_player = self.active_players[self.defender]
             self.last_action = self.defending_card
@@ -315,7 +315,7 @@ class DurakRunner:
                 self.add_record_to_round_log()
                 self.update_players_defence()
                 if self.render:
-                    self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+                    self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_suit)
         if len(self.attacking_cards) == len(self.defending_cards) == self.limit:
             self.successful = True
             self.defending = False
@@ -346,7 +346,7 @@ class DurakRunner:
                     self.add_record_to_round_log()
                     self.update_players_attack()
                     if self.render:
-                        self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_rank)
+                        self.gui.show_screen(self.players, self.table, self.active_players[self.attacker], self.active_players[self.defender], self.deck, self.trump_suit)
                     self.legal_attacking_cards = self.game_logic.get_legal_attacking_cards(player.hand, self.table)
                     if len(self.attacking_cards) < self.limit:
                         self.attacking_card = player.attack(self.table, self.legal_attacking_cards)
@@ -447,7 +447,7 @@ class DurakRunner:
                       (self.table[0][:], self.table[1][:]),
                       self.active_players[self.attacker].name[:],
                       self.active_players[self.defender].name[:],
-                      self.deck.cards[:], [player.hand[:] for player in self.players], self.trump_rank)
+                      self.deck.cards[:], [player.hand[:] for player in self.players], self.trump_suit)
         self.round_log.append(new_record)
 
     def add_round_log_to_game_log(self) -> None:
