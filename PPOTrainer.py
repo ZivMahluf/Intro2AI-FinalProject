@@ -207,27 +207,6 @@ class PPOTrainer(object):
                 joblib.dump(self.losses, "losses.pkl")
                 joblib.dump(self.epInfos, "epInfos.pkl")
 
-    def test(self, games):
-        losses = {player.name: 0 for player in self.players}  # for loss ratios
-        for i in range(games):
-            print('test game', i + 1)
-            state = self.vectorizedGame.reset()
-            self.vectorizedGame.render()
-            while True:
-                turn_player = self.vectorizedGame.get_turn_player()
-                to_attack = self.vectorizedGame.to_attack()
-                act = turn_player.get_action(state, to_attack)
-                state, _, done, _ = self.vectorizedGame.step(act)
-                self.vectorizedGame.render()
-                if done:
-                    break
-            loser = self.vectorizedGame.get_loser()
-            if loser is not None and loser.name in losses:
-                losses[loser.name] += 1
-        for name in losses:
-            losses[name] /= games
-        return losses
-
     def get_players(self):
         return self.players
 
