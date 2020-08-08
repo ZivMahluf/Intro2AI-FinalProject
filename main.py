@@ -39,26 +39,33 @@ def do_test_games(players, num_games):
 
 
 def train_PPO(session, epochs=2, games_per_epoch=5, test_games_per_epoch=10):
-    trainer = PPOTrainer(session, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=2)
+    trainer = PPOTrainer(session, games_per_batch=5, training_steps_per_game=25,
+                         learning_rate=0.00025, clip_range=0.2, save_every=2)
     ratios = {name: list() for name in trainer.get_learning_players_names()}
     for epoch in range(epochs):
-        print("------------------------- Epoch", epoch + 1, "out of", epochs, "-------------------------") if epochs > 1 else None
+        print("------------------------- Epoch", epoch + 1, "out of",
+              epochs, "-------------------------") if epochs > 1 else None
         trainer.train(games_per_epoch)
-        loss_ratios = do_test_games(trainer.get_players(), test_games_per_epoch)
+        loss_ratios = do_test_games(
+            trainer.get_players(), test_games_per_epoch)
         for name in loss_ratios:
             ratios[name].append(loss_ratios[name])
     return ratios, trainer.get_players()
 
 
 def train_NFSP(epochs=2, games_per_epoch=5, test_games_per_epoch=10):
-    learning_players = [NFSPPlayer(hand_size, "NFSP-1"), NFSPPlayer(hand_size, "NFSP-2")]
-    other_players = [RandomPlayer(hand_size, "Random-1"), AggressivePlayer(hand_size, "Aggressive-1")]
+    learning_players = [NFSPPlayer(
+        hand_size, "NFSP-1"), NFSPPlayer(hand_size, "NFSP-2")]
+    other_players = [RandomPlayer(
+        hand_size, "Random-1"), AggressivePlayer(hand_size, "Aggressive-1")]
     trainer = NFSPTrainer(learning_players, other_players)
     ratios = {name: list() for name in trainer.get_learning_players_names()}
     for epoch in range(epochs):
-        print("------------------------- Epoch", epoch + 1, "out of", epochs, "-------------------------") if epochs > 1 else None
+        print("------------------------- Epoch", epoch + 1, "out of",
+              epochs, "-------------------------") if epochs > 1 else None
         trainer.train(games_per_epoch)
-        loss_ratios = do_test_games(trainer.get_all_players(), test_games_per_epoch)
+        loss_ratios = do_test_games(
+            trainer.get_all_players(), test_games_per_epoch)
         for name in loss_ratios:
             ratios[name].append(loss_ratios[name])
     return ratios, learning_players
@@ -77,7 +84,8 @@ def plot(x_axis: List[Numeric], y_axes: Dict[str, Tuple[Color, List[Numeric]]], 
 
 
 def run_example_game():
-    players = [HumanPlayer(hand_size, "Human"), DefensivePlayer(hand_size, "Defensive")]
+    players = [HumanPlayer(hand_size, "Human"),
+               DefensivePlayer(hand_size, "Defensive")]
     env = DurakEnv(players, True)
     done = False
     state = env.reset()
@@ -90,7 +98,7 @@ def run_example_game():
 
 def main():
     # Example game:
-    run_example_game()
+    # run_example_game()
 
     # # Example PPO training and testing against random player with plots:
     # with tf.compat.v1.Session() as sess:
@@ -153,33 +161,42 @@ def main():
     # plot(list(range(epochs)), players_information, "Example Plot", "Epoch", "Loss ratio", True)
     # plt.show()
 
-    # # Example of plotting the loss ratio of a trained NFSP Player (trained against 3 random players) vs. 1 Aggressive, 1 Defensive, and 1 Random player
-    # # as a function of the number of training games:
-    # learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cpu')
-    # learning_players = [learning_player]
-    # training_players = [RandomPlayer(hand_size, "Random 1"), RandomPlayer(hand_size, "Random 2"), RandomPlayer(hand_size, "Random 3")]
-    # test_players = [RandomPlayer(hand_size, "Random"), AggressivePlayer(hand_size, "Aggressive"), DefensivePlayer(hand_size, "Defensive"), learning_player]
-    # trainer = NFSPTrainer(learning_players, training_players)
-    # training_games_per_epoch = 100
-    # epochs = 25
-    # cumulative_training_games_per_epoch = list(range(training_games_per_epoch, training_games_per_epoch * epochs + 1, training_games_per_epoch))
-    # test_games_per_epoch_vs_test_players = 50
-    # loss_ratio_vs_test_players = []
-    # loss_ratio_vs_training_players = []
-    # for epoch in range(epochs):
-    #     print("------------------------- Epoch", epoch + 1, "out of", epochs, "-------------------------")
-    #     print("Training for", training_games_per_epoch, "games (total number of training games: " + str(cumulative_training_games_per_epoch[epoch]) + ")")
-    #     trainer.train(training_games_per_epoch)
-    #     print("Testing vs Training Players...")
-    #     loss_ratios = do_test_games(trainer.get_all_players(), test_games_per_epoch_vs_test_players)
-    #     loss_ratio_vs_training_players.append(loss_ratios[learning_player.name])
-    #     print("Testing vs Test Players...")
-    #     loss_ratios = do_test_games(test_players, test_games_per_epoch_vs_test_players)
-    #     loss_ratio_vs_test_players.append(loss_ratios[learning_player.name])
-    # learning_player_info = {"VS. Test Players": ((1., 0., 0.), loss_ratio_vs_test_players),
-    #                         "VS. Training Players": ((0., 1., 0.), loss_ratio_vs_training_players)}
-    # plot(cumulative_training_games_per_epoch, learning_player_info, "Loss Ratio of Trained NFSP Player VS 3 Random Players", "Number of training games", "Loss Ratio", True)
-    # plt.show()
+    # Example of plotting the loss ratio of a trained NFSP Player (trained against 3 random players) vs. 1 Aggressive, 1 Defensive, and 1 Random player
+    # as a function of the number of training games:
+    learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cpu')
+    learning_players = [learning_player]
+    training_players = [RandomPlayer(hand_size, "Random 1"), RandomPlayer(
+        hand_size, "Random 2"), RandomPlayer(hand_size, "Random 3")]
+    test_players = [RandomPlayer(hand_size, "Random"), AggressivePlayer(
+        hand_size, "Aggressive"), DefensivePlayer(hand_size, "Defensive"), learning_player]
+    trainer = NFSPTrainer(learning_players, training_players)
+    training_games_per_epoch = 100
+    epochs = 25
+    cumulative_training_games_per_epoch = list(range(
+        training_games_per_epoch, training_games_per_epoch * epochs + 1, training_games_per_epoch))
+    test_games_per_epoch_vs_test_players = 50
+    loss_ratio_vs_test_players = []
+    loss_ratio_vs_training_players = []
+    for epoch in range(epochs):
+        print("------------------------- Epoch", epoch + 1,
+              "out of", epochs, "-------------------------")
+        print("Training for", training_games_per_epoch, "games (total number of training games: " +
+              str(cumulative_training_games_per_epoch[epoch]) + ")")
+        trainer.train(training_games_per_epoch)
+        print("Testing vs Training Players...")
+        loss_ratios = do_test_games(
+            trainer.get_all_players(), test_games_per_epoch_vs_test_players)
+        loss_ratio_vs_training_players.append(
+            loss_ratios[learning_player.name])
+        print("Testing vs Test Players...")
+        loss_ratios = do_test_games(
+            test_players, test_games_per_epoch_vs_test_players)
+        loss_ratio_vs_test_players.append(loss_ratios[learning_player.name])
+    learning_player_info = {"VS. Test Players": ((1., 0., 0.), loss_ratio_vs_test_players),
+                            "VS. Training Players": ((0., 1., 0.), loss_ratio_vs_training_players)}
+    plot(cumulative_training_games_per_epoch, learning_player_info,
+         "Loss Ratio of Trained NFSP Player VS 3 Random Players", "Number of training games", "Loss Ratio", True)
+    plt.show()
 
 
 if __name__ == '__main__':
