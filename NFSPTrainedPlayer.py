@@ -8,9 +8,6 @@ import copy
 
 class TrainedNFSPPlayer(NFSPPlayer):
 
-    def __iniit(self, hand_size, name):
-        super().__init__(hand_size, name)
-
     def __init__(self, hand_size, name):
         super().__init__(hand_size, name)
         self.policy = Policy()
