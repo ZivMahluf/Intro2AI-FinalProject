@@ -163,7 +163,7 @@ def main():
 
     # Example of plotting the loss ratio of a trained NFSP Player (trained against 3 random players) vs. 1 Aggressive, 1 Defensive, and 1 Random player
     # as a function of the number of training games:
-    learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cpu')
+    learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cuda')
     learning_players = [learning_player]
     training_players = [RandomPlayer(hand_size, "Random 1"), RandomPlayer(
         hand_size, "Random 2"), RandomPlayer(hand_size, "Random 3")]
@@ -171,7 +171,7 @@ def main():
         hand_size, "Aggressive"), DefensivePlayer(hand_size, "Defensive"), learning_player]
     trainer = NFSPTrainer(learning_players, training_players)
     training_games_per_epoch = 100
-    epochs = 25
+    epochs = 1000
     cumulative_training_games_per_epoch = list(range(
         training_games_per_epoch, training_games_per_epoch * epochs + 1, training_games_per_epoch))
     test_games_per_epoch_vs_test_players = 50
@@ -192,6 +192,7 @@ def main():
         loss_ratios = do_test_games(
             test_players, test_games_per_epoch_vs_test_players)
         loss_ratio_vs_test_players.append(loss_ratios[learning_player.name])
+    learning_player.save_network("8hours")
     learning_player_info = {"VS. Test Players": ((1., 0., 0.), loss_ratio_vs_test_players),
                             "VS. Training Players": ((0., 1., 0.), loss_ratio_vs_training_players)}
     plot(cumulative_training_games_per_epoch, learning_player_info,

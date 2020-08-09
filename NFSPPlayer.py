@@ -197,7 +197,7 @@ class NFSPPlayer(DurakPlayer):
         """
         batch_size = min(self.batch_size, len(self.replay_buffer))
         state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
-        weights = torch.ones(batch_size).to(self.device)
+        weights = torch.ones(batch_size)
 
         state = torch.FloatTensor(state).to(self.device)
         next_state = torch.FloatTensor(next_state).to(self.device)
