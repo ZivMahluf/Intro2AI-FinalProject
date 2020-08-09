@@ -4,24 +4,20 @@ import torch
 from NFSPPlayer import NFSPPlayer
 from typing import Tuple, List, Optional
 from Deck import Deck
-
+import copy
 
 class TrainedNFSPPlayer(NFSPPlayer):
 
-    def __init__(self, hand_size, name, path):
+    def __iniit(self, hand_size, name):
+        super().__init__(hand_size, name)
+
+    def __init__(self, hand_size, name):
         super().__init__(hand_size, name)
         self.policy = Policy()
         self.current_model = DQN(False)
-        fname = os.path.join("NFSP-models", path)
-        """
-            load_model(models={"p1": p1_current_model, "p2": p2_current_model},
-               policies={"p1": p1_policy, "p2": p2_policy}, args=args)
-        """
-        if not os.path.exists(fname):
-            raise ValueError("No model saved with name {}".format(fname))
-        checkpoint = torch.load(fname, None)
-        self.current_model.load_state_dict(checkpoint['model'])
-        self.policy.load_state_dict(checkpoint['policy'])
+
+    def load_from_other_player(self, other: NFSPPlayer):
+        self.policy = copy.deepcopy(other.policy)
 
     def learn_step(self, old_state, new_state, action, reward, info):
         pass

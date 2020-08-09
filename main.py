@@ -6,6 +6,7 @@ from NFSPPlayer import NFSPPlayer
 from NFSPTrainer import NFSPTrainer
 from PPOTrainer import PPOTrainer
 from DurakEnv import DurakEnv
+from NFSPTrainedPlayer import TrainedNFSPPlayer
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from typing import List, Union, Dict, Tuple
@@ -163,12 +164,14 @@ def main():
 
     # Example of plotting the loss ratio of a trained NFSP Player (trained against 3 random players) vs. 1 Aggressive, 1 Defensive, and 1 Random player
     # as a function of the number of training games:
-    learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cuda')
+    learning_player = NFSPPlayer(hand_size, "NFSP Player", 'cpu')
     learning_players = [learning_player]
+    trained_player = TrainedNFSPPlayer(hand_size, 'Trained Player')
+    trained_player.load_from_other_player(learning_player)
     training_players = [RandomPlayer(hand_size, "Random 1"), RandomPlayer(
         hand_size, "Random 2"), RandomPlayer(hand_size, "Random 3")]
     test_players = [RandomPlayer(hand_size, "Random"), AggressivePlayer(
-        hand_size, "Aggressive"), DefensivePlayer(hand_size, "Defensive"), learning_player]
+        hand_size, "Aggressive"), DefensivePlayer(hand_size, "Defensive"), trained_player]
     trainer = NFSPTrainer(learning_players, training_players)
     training_games_per_epoch = 100
     epochs = 1000
@@ -189,10 +192,10 @@ def main():
         loss_ratio_vs_training_players.append(
             loss_ratios[learning_player.name])
         print("Testing vs Test Players...")
+        trained_player.load_from_other_player(learning_player)
         loss_ratios = do_test_games(
             test_players, test_games_per_epoch_vs_test_players)
-        loss_ratio_vs_test_players.append(loss_ratios[learning_player.name])
-    learning_player.save_network("8hours")
+        loss_ratio_vs_test_players.append(loss_ratios[trained_player.name])
     learning_player_info = {"VS. Test Players": ((1., 0., 0.), loss_ratio_vs_test_players),
                             "VS. Training Players": ((0., 1., 0.), loss_ratio_vs_training_players)}
     plot(cumulative_training_games_per_epoch, learning_player_info,
