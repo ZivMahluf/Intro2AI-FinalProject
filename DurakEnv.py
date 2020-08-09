@@ -3,6 +3,7 @@ from HumanPlayer import HumanPlayer
 from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
+import random
 
 
 class DurakEnv:
@@ -51,6 +52,7 @@ class DurakEnv:
 
     def reset(self) -> StateType:
         self.active_players = self.players[:]
+        random.shuffle(self.active_players)
         self.attacking_player = None
         self.turn_player = None
         self.loser = None

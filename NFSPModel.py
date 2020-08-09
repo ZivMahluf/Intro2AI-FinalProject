@@ -10,7 +10,7 @@ import random
 NUM_ACTIONS = 37
 INPUT_SIZE = 37 + 36*4
 INPUT_SHAPE = (INPUT_SIZE,)
-HIDDEN_LAYER_DIM = 64  # todo maybe 32, 64
+HIDDEN_LAYER_DIM = 37  # todo maybe 32, 64
 
 
 def DQN(is_dueling):
