@@ -1,4 +1,7 @@
-import pygame
+try:
+    import pygame
+except:
+    print("GUI not available")
 import os
 from math import sin, cos, radians
 from DurakPlayer import DurakPlayer
