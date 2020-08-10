@@ -25,7 +25,9 @@ class NFSPTrainer:
         for i in range(games):
             state = self.env.reset()
             self.env.render()
+            count = 0
             while True:
+                count+=1
                 turn_player = self.env.get_turn_player()
                 to_attack = self.env.to_attack()
                 act = turn_player.get_action(state, to_attack)
@@ -34,5 +36,5 @@ class NFSPTrainer:
                     turn_player.learn_step(state, new_state, act, reward, info)
                 state = new_state
                 self.env.render()
-                if done:
+                if done or count>500:
                     break
