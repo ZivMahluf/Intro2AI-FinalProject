@@ -17,8 +17,8 @@ class PPOTrainer(object):
                  max_grad_norm=0.5, min_learning_rate=0.000001, learning_rate, clip_range, save_every=100):
 
         # network/model for training
-        output_dim = len(Deck.get_full_list_of_cards()) + 1
-        input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
+        output_dim = PPOPlayer.output_dim
+        input_dim = PPOPlayer.input_dim
         self.trainingNetwork = PPONetwork(sess, input_dim, output_dim, "trainNet")
         self.trainingModel = PPOModel(sess, self.trainingNetwork, input_dim, output_dim, ent_coef, vf_coef, max_grad_norm)
 
@@ -165,7 +165,8 @@ class PPOTrainer(object):
 
         nUpdates = total_num_games // self.games_per_batch
 
-        for update in range(nUpdates):
+        for update in range(1, nUpdates + 1):
+            print("Update", update, "out of", nUpdates)
 
             alpha = 1.0 - update / nUpdates
             lrnow = self.learningRate * alpha
