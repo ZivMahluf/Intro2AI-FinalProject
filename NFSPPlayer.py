@@ -23,7 +23,7 @@ class NFSPPlayer(DurakPlayer):
         # todo pick storage size that is large enough
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
-        self.capacity = 10000  # 2400
+        self.capacity = 100000  # 2400
         self.rl_learning_rate = 0.1  # paper 0.1 experience ? # high learning rate here make the current q value
         # more dominant (0.5, 0.7, 0.6
         self.sl_learning_rate = 0.005   # 0.005 experience ? high learning rate here make
@@ -279,3 +279,8 @@ class NFSPPlayer(DurakPlayer):
         self.current_model.load_state_dict(checkpoint['model'])
         self.policy.load_state_dict(checkpoint['policy'])
         self.update_target(self.current_model, self.target_model)
+
+    def load_network_from_other_by_reference(self, other):
+        self.policy = other.policy
+        self.current_model = other.current_model
+        self.target_model = other.target_model
