@@ -8,6 +8,9 @@ import itertools
 
 class PPOPlayer(DurakPlayer):
 
+    output_dim = len(Deck.get_full_list_of_cards()) + 1
+    input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
+
     def __init__(self, hand_size: int, name: str, training_network=None, sess=None):
         super().__init__(hand_size, name)
         self.memory = []
@@ -23,9 +26,7 @@ class PPOPlayer(DurakPlayer):
         else:
             self.test_phase = True
             # load the network from memory, and use it for interpretation (not training)
-            output_dim = len(Deck.get_full_list_of_cards()) + 1
-            input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
-            self.training_network = PPONetwork(sess, input_dim, output_dim, "testNet")
+            self.training_network = PPONetwork(sess, self.input_dim, self.output_dim, "testNet")
 
             # find latest model parameters file
             files = [(int(f[5:]), f) for f in os.listdir(os.curdir + '/PPOParams') if f.find('model') != -1]
@@ -103,3 +104,25 @@ class PPOPlayer(DurakPlayer):
     def initialize_for_game(self):
         super().initialize_for_game()
         self.memory = []
+
+
+def from_path(sess, hand_size, name, path) -> PPOPlayer:
+    """
+    Loads a PPOPlayer using the parameters from the file whose path is given as an input.
+    If the loading fails, a player with an untrained network will be returned.
+    :param sess: tensorflow session
+    :param hand_size: size of starting hand for the player
+    :param name: name of the player
+    :param path: path of the parameters file
+    :return: a PPOPlayer with parameters from the given file. If loading fails, a non-trained PPOPlayer
+    """
+    network = PPONetwork(sess, PPOPlayer.input_dim, PPOPlayer.output_dim, name + "_Network")
+    try:
+        parameters = joblib.load(path)
+        network.loadParams(parameters)
+        player = PPOPlayer(hand_size, name, network, sess)
+        player.test_phase = True
+        return player
+    except:
+        player = PPOPlayer(hand_size, name, network, sess)
+        return player
