@@ -52,7 +52,7 @@ class NFSPPlayer(DurakPlayer):
         self.eps_decay = 10000  # todo : pick parameters that make sense, (10000, 10, )
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 128   # todo check for the best batch size (paper 128)
+        self.batch_size = 32   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
         self.T = 5
         self.update_time = 1500  # paper 300, (1500, 3000)
@@ -162,11 +162,9 @@ class NFSPPlayer(DurakPlayer):
         _, new_input = self.get_network_input(legal_new_cards, new_state, self.discard_pile, self._hand)
         self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
             action), reward, new_input, 0)
-        if self.is_best_response:
-            self.compute_sl_loss()
-        else:
+        self.compute_sl_loss()
             # at the end of the episode logging record must be deleted
-            self.compute_rl_loss()
+        self.compute_rl_loss()
         self.round += 1
         if self.update_time % self.round == 0:
             self.update_target(self.current_model, self.target_model)
@@ -176,6 +174,8 @@ class NFSPPlayer(DurakPlayer):
         Update policy neural network
         """
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
+        if batch_size == 0:
+            return
         state_array, action = self.reservoir_buffer.sample(batch_size)
         state = torch.FloatTensor(state_array).to(self.device)
         action = torch.LongTensor(action).to(self.device)
