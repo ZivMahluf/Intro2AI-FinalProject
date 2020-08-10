@@ -272,7 +272,7 @@ class DurakEnv:
 
         sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
         if self.turn_player.hand_size == 0:
-            sum_all += 80
+            sum_all += 200
 
         return sum_all
 
