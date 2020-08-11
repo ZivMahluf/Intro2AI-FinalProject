@@ -7,8 +7,10 @@ import joblib
 from Deck import Deck
 from DurakEnv import DurakEnv
 from PPOPlayer import PPOPlayer
+from DefensivePlayer import DefensivePlayer
 import logging
 import time
+import os
 
 
 class PPOTrainer(object):
@@ -36,6 +38,16 @@ class PPOTrainer(object):
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 1", self.playerNetworks[2]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])]
+
+        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        self.playerNetworks[1].loadParams(params)
+        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        self.playerNetworks[2].loadParams(params)
+        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        self.playerNetworks[3].loadParams(params)
+        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        self.playerNetworks[4].loadParams(params)
+
         # environment
         game = DurakEnv(self.players, False)
         self.state = game.reset()
@@ -81,7 +93,8 @@ class PPOTrainer(object):
         done = False
         game = self.vectorizedGame
         state = game.reset()
-        while not done:
+        steps = 0
+        while not done and steps < 500:
             turn_player = game.get_turn_player()
             available_actions = game.get_available_actions()
             action = turn_player.get_action(state, game.to_attack())
@@ -101,6 +114,7 @@ class PPOTrainer(object):
 
             # update current state
             state = new_state
+            steps += 1
 
         # add dones to last plays
         for i in range(1, len(game.players) + 1):
@@ -117,9 +131,6 @@ class PPOTrainer(object):
         mb_values = np.asarray(tuple(mb_values), dtype=np.float64)
         mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float64)
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
-
-        # convert rewards to keep them in range
-        # mb_rewards /= self.rewardNormalization
 
         # discount/bootstrap value function with generalized advantage estimation:
         mb_returns = np.zeros_like(mb_rewards)
@@ -166,7 +177,6 @@ class PPOTrainer(object):
         nUpdates = total_num_games // self.games_per_batch
 
         for update in range(1, nUpdates + 1):
-            print("Update", update, "out of", nUpdates)
 
             alpha = 1.0 - update / nUpdates
             lrnow = self.learningRate * alpha
@@ -179,7 +189,8 @@ class PPOTrainer(object):
             curr_params = self.trainingNetwork.getParams()
             mb_lossvals = []
 
-            for game_idx in range(self.games_per_batch):
+            # train on the games after shuffling them
+            for game_idx in np.random.randint(0, self.games_per_batch - 1, self.games_per_batch):
                 steps = 0
                 while steps + self.training_steps_per_game < states[game_idx].shape[0]:  # less than the amount of steps (actions) in the game
                     mb_inds = np.arange(steps, steps + self.training_steps_per_game)
@@ -187,9 +198,16 @@ class PPOTrainer(object):
                                                                 availAcs[game_idx][mb_inds], returns[game_idx][mb_inds],
                                                                 actions[game_idx][mb_inds], values[game_idx][mb_inds],
                                                                 neglogpacs[game_idx][mb_inds]))
-                    steps += self.training_steps_per_game
+                    if steps == states[game_idx].shape[0] - 1:
+                        break
+                    if steps + self.training_steps_per_game < states[game_idx].shape[0]:
+                        # basic step
+                        steps += self.training_steps_per_game
+                    else:
+                        # go over last indices, which are less than self.training_steps_per_game
+                        steps = states[game_idx].shape[0] - self.training_steps_per_game - 1
 
-            logging.info("Finished training in update num: %s" % update)
+            logging.info("Finished training in update num: %s" % update * self.games_per_batch)
 
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
@@ -203,13 +221,23 @@ class PPOTrainer(object):
                     break
 
             if update % self.saveEvery == 0:
-                name = "PPOParams/model" + str(update)
+                name = "PPOParams/model" + str(update * self.games_per_batch)
                 self.trainingNetwork.saveParams(name)
                 joblib.dump(self.losses, "losses.pkl")
                 joblib.dump(self.epInfos, "epInfos.pkl")
+
+            print("finished " + str(update * self.games_per_batch))
 
     def get_players(self):
         return self.players
 
     def get_learning_players_names(self):
         return [player.name for player in self.players]
+
+
+if __name__ == "__main__":
+    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
+    with tf.compat.v1.Session() as sess:
+        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=10)
+        mainSim.train(5000)
+    logging.shutdown()
