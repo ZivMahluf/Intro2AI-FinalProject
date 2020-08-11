@@ -268,15 +268,26 @@ class DurakEnv:
                len([c for c in self.turn_player.last_hand if c[1] == self.trump_suit])
 
     def calculate_reward(self):
-        suits_avg_change = self.calculate_average_change(for_trump=False) / 27
-        trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
-        diff_in_trump_cards = self.difference_in_trump_cards() / 9
+        # suits_avg_change = self.calculate_average_change(for_trump=False) / 27
+        # trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
+        # diff_in_trump_cards = self.difference_in_trump_cards() / 9
 
-        sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
-        if self.turn_player.hand_size == 0:
-            sum_all += 1000
+        # small reward on success defense
+        # neg reward on taking cards
+        if not self.turn_player.hand_size and not self.deck.current_num_cards:
+            return 30
 
-        return sum_all
+        if not self.defending:
+            if self.successful:
+                return 1
+            else:
+                return -1
+
+        return 0
+
+        # sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
+        # if self.turn_player.hand_size == 0:
+        #     sum_all += 1000
 
     def check_end_round(self):
         if not self.defending:

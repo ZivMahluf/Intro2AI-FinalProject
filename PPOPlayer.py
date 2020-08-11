@@ -34,6 +34,7 @@ class PPOPlayer(DurakPlayer):
             latest_file = files[-1][1]
             params = joblib.load(os.curdir + '/PPOParams/' + latest_file)
             self.training_network.loadParams(params)
+            print("loaded " + latest_file)
 
     def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
                          successfully_defended: bool) -> None:
