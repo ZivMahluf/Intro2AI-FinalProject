@@ -45,7 +45,7 @@ class PPOPlayer(DurakPlayer):
             # You can save the memory for each player separately here. We chose not to.
             pass
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
 
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
@@ -63,7 +63,7 @@ class PPOPlayer(DurakPlayer):
             return action
         return action
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]],
                legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
 
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))

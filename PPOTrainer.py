@@ -86,7 +86,7 @@ class PPOTrainer(object):
             available_actions = game.get_available_actions()
             action = turn_player.get_action(state, game.to_attack())
             value, neglogpac = turn_player.get_val_neglogpac()
-            new_state, reward, done, info = game.step(action)  # update the game
+            new_state, reward, done = game.step(action)  # update the game
 
             # add to list
             mb_obs.append(turn_player.last_converted_state.flatten())
@@ -97,7 +97,6 @@ class PPOTrainer(object):
             mb_rewards.append(reward)
             mb_dones.append(done)
             mb_availAcs.append(turn_player.last_converted_available_cards.flatten())
-            self.epInfos.append(info)
 
             # update current state
             state = new_state
@@ -206,7 +205,6 @@ class PPOTrainer(object):
                 name = "PPOParams/model" + str(update)
                 self.trainingNetwork.saveParams(name)
                 joblib.dump(self.losses, "losses.pkl")
-                joblib.dump(self.epInfos, "epInfos.pkl")
 
     def get_players(self):
         return self.players

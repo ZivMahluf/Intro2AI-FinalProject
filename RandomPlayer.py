@@ -7,7 +7,7 @@ class RandomPlayer(DurakPlayer):
     Random agent
     """
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         """
         chooses a random card from legal cards to play
         """
@@ -16,7 +16,7 @@ class RandomPlayer(DurakPlayer):
             self._hand.remove(attacking_card)
         return attacking_card
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         """
         chooses a random card from legal cards to play
         """

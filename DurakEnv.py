@@ -13,9 +13,9 @@ class DurakEnv:
     HAND_SIZE = 6
 
     CardListType = List[Deck.CardType]
-    StateType = Tuple[CardListType, CardListType, CardListType, CardListType]
+    # attacking cards, defending cards, legal attack cards, legal defence cards, number of cards in deck, number of cards in each player's hand
+    StateType = Tuple[CardListType, CardListType, CardListType, CardListType, int, List[int]]
     NumberType = Union[int, float]
-    InfoType = List
 
     def __init__(self, players: List[DurakPlayer], render=False):
         # non-changing parameters:
@@ -76,7 +76,8 @@ class DurakEnv:
         self.set_first_attacker()
         self.do_reset_round()
         self.update_legal_cards()
-        return self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:]
+        players_hands_sizes = [player.hand_size for player in self.players]
+        return self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:], self.deck.current_num_cards, players_hands_sizes
 
     def initialize_players(self):
         for player in self.active_players:
@@ -118,7 +119,7 @@ class DurakEnv:
                 temp = self.active_players.pop(self.attacker)
                 self.active_players.append(temp)
 
-    def step(self, action) -> Tuple[StateType, NumberType, bool, InfoType]:
+    def step(self, action) -> Tuple[StateType, NumberType, bool]:
         self.last_action = action
         self.reward = 0
         if self.attack_phase:
@@ -136,7 +137,8 @@ class DurakEnv:
                 self.do_reset_round()
         self.update_legal_cards()
         self.dispose_events()
-        return (self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:]), self.reward, self.game_over(), list()
+        players_hands_sizes = [player.hand_size for player in self.players]
+        return (self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:], self.deck.current_num_cards, players_hands_sizes), self.reward, self.game_over()
 
     def do_attack_phase(self):
         if self.last_action != self.deck.NO_CARD:

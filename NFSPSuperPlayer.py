@@ -11,7 +11,7 @@ class NFSPSuperPlayer(NFSPPlayer):
     def attack(self, table, legal_cards_to_play):
         self.attacked = True
         self.attackPlayer._hand = self._hand
-        act =  self.attackPlayer.attack(table, legal_cards_to_play)
+        act = self.attackPlayer.attack(table, legal_cards_to_play)
         self._hand = self.attackPlayer._hand
         return act
 
@@ -32,11 +32,10 @@ class NFSPSuperPlayer(NFSPPlayer):
         self.attackPlayer.save_network(name+"attack")
         self.defendPlayer.save_network(name+"defend")
 
-
-    def learn_step(self, old_state, new_state, action, reward, info):
+    def learn_step(self, old_state, new_state, action, reward):
         if self.attacked:
             self.attackPlayer.learn_step(
-                old_state, new_state, action, reward, info)
+                old_state, new_state, action, reward)
         else:
             self.defendPlayer.learn_step(
-                old_state, new_state, action, reward, info)
+                old_state, new_state, action, reward)

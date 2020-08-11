@@ -125,7 +125,7 @@ class NFSPPlayer(DurakPlayer):
             self._hand.remove(card)
         return card
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         """
         get defend action
         """
@@ -141,7 +141,7 @@ class NFSPPlayer(DurakPlayer):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
         # return self.eps_start * (1 / (self.round ** (1/2)))
 
-    def learn_step(self, old_state, new_state, action, reward, info):
+    def learn_step(self, old_state, new_state, action, reward):
         """
         update neural networks
         """

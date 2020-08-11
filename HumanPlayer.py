@@ -27,7 +27,7 @@ class HumanPlayer(DurakPlayer):
         self.__game_gui = gui
         self.__set_gui = True
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         if self.__set_gui:
             return self.__get_card(legal_cards_to_play, "- Attack -")
         attacking_card = random.choice(legal_cards_to_play)
@@ -35,7 +35,7 @@ class HumanPlayer(DurakPlayer):
             self._hand.remove(attacking_card)
         return attacking_card
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         if self.__set_gui:
             return self.__get_card(legal_cards_to_play, "- Defend -")
         defending_card = random.choice(legal_cards_to_play)

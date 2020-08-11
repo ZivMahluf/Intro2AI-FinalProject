@@ -38,16 +38,16 @@ class DurakPlayer:
     def get_action(self, state, to_attack):
         """
         Returns an action based on the given state and attack indicator.
-        :param state: (attacking cards, defending cards, legal attack cards, legal defence cards)
+        :param state: (attacking cards, defending cards, legal attack cards, legal defence cards, number of cards in deck, number of cards in each player's hand)
         :param to_attack: boolean flag indicating if the action is an attack or a defence.
         :return: chosen action.
         """
         self.last_hand = self.hand.copy()
         if to_attack:
-            return self.attack((state[0], state[1]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
-        return self.defend((state[0], state[1]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
+            return self.attack((state[0], state[1], state[4], state[5]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
+        return self.defend((state[0], state[1], state[4], state[5]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         """
         Attacks with a legal card.
         :param table: A tuple (attacking_cards, defending_cards) of cards on the table.
@@ -56,7 +56,7 @@ class DurakPlayer:
         """
         raise NotImplementedError()
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType], int, List[int]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
         """
         Defends with a legal card.
         :param table: A tuple (attacking_cards, defending_cards) of cards on the table.

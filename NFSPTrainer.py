@@ -31,9 +31,9 @@ class NFSPTrainer:
                 turn_player = self.env.get_turn_player()
                 to_attack = self.env.to_attack()
                 act = turn_player.get_action(state, to_attack)
-                new_state, reward, done, info = self.env.step(act)
+                new_state, reward, done = self.env.step(act)
                 if turn_player in self.learning_players:
-                    turn_player.learn_step(state, new_state, act, reward, info)
+                    turn_player.learn_step(state, new_state, act, reward)
                 state = new_state
                 self.env.render()
                 if done or count > 300:
