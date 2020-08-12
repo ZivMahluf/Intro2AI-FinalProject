@@ -55,7 +55,7 @@ class NFSPPlayer(DurakPlayer):
         self.eps_decay = 10000  # todo : pick parameters that make sense, (10000, 10, )
         self.round = 1
         self.is_best_response = False
-        self.batch_size = 32   # todo check for the best batch size (paper 128)
+        self.batch_size = 128   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
         self.T = 5
         self.update_time = 1500  # paper 300, (1500, 3000)
