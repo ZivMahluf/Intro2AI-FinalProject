@@ -15,7 +15,7 @@ class TrainedNFSPPlayer(NFSPPlayer):
     def load_from_other_player(self, other: NFSPPlayer) -> None:
         self.policy = copy.deepcopy(other.policy)
 
-    def learn_step(self, old_state, new_state, action, reward):
+    def learn_step(self, old_state, new_state, action, reward, old_hand):
         pass
 
     def act(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:

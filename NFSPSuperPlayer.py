@@ -33,8 +33,8 @@ class NFSPSuperPlayer(NFSPPlayer):
         self.attackPlayer.save_network(name+"attack")
         self.defendPlayer.save_network(name+"defend")
 
-    def learn_step(self, old_state: StateType, new_state: StateType, action: CardType, reward: NumberType) -> None:
+    def learn_step(self, old_state: StateType, new_state: StateType, action: CardType, reward: NumberType, old_hand) -> None:
         if self.attacked:
-            self.attackPlayer.learn_step(old_state, new_state, action, reward)
+            self.attackPlayer.learn_step(old_state, new_state, action, reward, old_hand)
         else:
-            self.defendPlayer.learn_step(old_state, new_state, action, reward)
+            self.defendPlayer.learn_step(old_state, new_state, action, reward, old_hand)

@@ -144,7 +144,7 @@ class NFSPPlayer(DurakPlayer):
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
         # return self.eps_start * (1 / (self.round ** (1/2)))
 
-    def learn_step(self, old_state: StateType, new_state: StateType, action: CardType, reward: NumberType) -> None:
+    def learn_step(self, old_state: StateType, new_state: StateType, action: CardType, reward: NumberType, old_hand) -> None:
         """
         update neural networks
         """
@@ -161,7 +161,7 @@ class NFSPPlayer(DurakPlayer):
                                if card in self._hand or card == Deck.NO_CARD or card == action]
             legal_new_cards = [card for card in new_state[3]
                                if card in self._hand or card == Deck.NO_CARD]
-        _, old_input = self.get_network_input(legal_old_cards, (old_state[0], old_state[1], old_state[4], old_state[5]), self.discard_pile, self._hand)
+        _, old_input = self.get_network_input(legal_old_cards, (old_state[0], old_state[1], old_state[4], old_state[5]), self.discard_pile, old_hand)
         _, new_input = self.get_network_input(legal_new_cards, (new_state[0], new_state[1], new_state[4], new_state[5]), self.discard_pile, self._hand)
         self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
             action), reward, new_input, 0)
