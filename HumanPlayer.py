@@ -1,4 +1,6 @@
-from DurakPlayer import DurakPlayer, Deck, Tuple, List, Optional
+from Types import CardType, CardListType, TableType
+from DurakPlayer import DurakPlayer
+from Deck import Deck
 import pygame
 import random
 
@@ -27,7 +29,7 @@ class HumanPlayer(DurakPlayer):
         self.__game_gui = gui
         self.__set_gui = True
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def attack(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         if self.__set_gui:
             return self.__get_card(legal_cards_to_play, "- Attack -")
         attacking_card = random.choice(legal_cards_to_play)
@@ -35,7 +37,7 @@ class HumanPlayer(DurakPlayer):
             self._hand.remove(attacking_card)
         return attacking_card
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         if self.__set_gui:
             return self.__get_card(legal_cards_to_play, "- Defend -")
         defending_card = random.choice(legal_cards_to_play)
@@ -43,7 +45,7 @@ class HumanPlayer(DurakPlayer):
             self._hand.remove(defending_card)
         return defending_card
 
-    def __get_card(self, legal_cards_to_play: List[Deck.CardType], message: str = "") -> Optional[Deck.CardType]:
+    def __get_card(self, legal_cards_to_play: CardListType, message: str) -> CardType:
         """
         Gets a card selected by the player, and removes it from the hand of the player.
         A left click on a legal card in the hand selects it, and a right click anywhere selects to play Deck.NO_CARD. If the selected card
@@ -57,10 +59,7 @@ class HumanPlayer(DurakPlayer):
         selected_card = Deck.NO_CARD
         while waiting:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return None
-
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.__game_gui.get_pass_button().collidepoint(event.pos) and selected_card in legal_cards_to_play:
                         return selected_card
                 elif event.type == pygame.MOUSEBUTTONUP:
@@ -77,7 +76,7 @@ class HumanPlayer(DurakPlayer):
             self._hand.remove(selected_card)
         return selected_card
 
-    def __get_clicked_card(self) -> Optional[Deck.CardType]:
+    def __get_clicked_card(self) -> CardType:
         """
         Detects which card the player clicked on and returns is.
         :return: The card in the player's hand which was clicked on.

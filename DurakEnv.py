@@ -1,8 +1,9 @@
+from Types import List, Tuple, NumberType, StateType
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
-from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
+
 import random
 
 
@@ -11,11 +12,6 @@ class DurakEnv:
     MIN_PLAYERS = 2
     MAX_PLAYERS = 6
     HAND_SIZE = 6
-
-    CardListType = List[Deck.CardType]
-    StateType = Tuple[CardListType, CardListType, CardListType, CardListType]
-    NumberType = Union[int, float]
-    InfoType = List
 
     def __init__(self, players: List[DurakPlayer], render=False):
         # non-changing parameters:
@@ -76,7 +72,8 @@ class DurakEnv:
         self.set_first_attacker()
         self.do_reset_round()
         self.update_legal_cards()
-        return self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:]
+        players_hands_sizes = [player.hand_size for player in self.players]
+        return self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:], self.deck.current_num_cards, players_hands_sizes
 
     def initialize_players(self):
         for player in self.active_players:
@@ -118,14 +115,14 @@ class DurakEnv:
                 temp = self.active_players.pop(self.attacker)
                 self.active_players.append(temp)
 
-    def step(self, action) -> Tuple[StateType, NumberType, bool, InfoType]:
+    def step(self, action) -> Tuple[StateType, NumberType, bool]:
         self.last_action = action
         self.reward = 0
         if self.attack_phase:
             self.do_attack_phase()
         else:
             self.do_defence_phase()
-        self.reward = self.calculate_reward()
+        self.calculate_reward()
         self.check_end_round()
         if self.reset_round:
             self.update_end_round_players()
@@ -136,7 +133,8 @@ class DurakEnv:
                 self.do_reset_round()
         self.update_legal_cards()
         self.dispose_events()
-        return (self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:]), self.reward, self.game_over(), list()
+        players_hands_sizes = [player.hand_size for player in self.players]
+        return (self.state[0][:], self.state[1][:], self.state[2][:], self.state[3][:], self.deck.current_num_cards, players_hands_sizes), self.reward, self.game_over()
 
     def do_attack_phase(self):
         if self.last_action != self.deck.NO_CARD:
@@ -266,28 +264,13 @@ class DurakEnv:
                len([c for c in self.turn_player.last_hand if c[1] == self.trump_suit])
 
     def calculate_reward(self):
-        # suits_avg_change = self.calculate_average_change(for_trump=False) / 27
-        # trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
-        # diff_in_trump_cards = self.difference_in_trump_cards() / 9
-        #
-        # sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
-        # if self.turn_player.hand_size == 0 and self.deck.current_num_cards == 0:
-        #     sum_all += 1000
-        #
-        # return sum_all
-        if self.turn_player.hand_size == 0 and self.deck.current_num_cards == 0:
-            return 1000
-
-        # if not self.defending:
-        #     if self.successful:
-        #         return 0
-        #     else:
-        #         return -80
-
-        reward = -1 * self.last_action[0] if self.last_action[0] != -1 else -24
-        if self.last_action[1] == 0:
-            reward -= 9
-        return reward
+        if not self.turn_player.hand_size and not self.deck.current_num_cards:
+            self.reward = 30
+        if not self.defending:
+            if self.successful:
+                self.reward = 1
+            else:
+                self.reward = -1
 
     def check_end_round(self):
         if not self.defending:
@@ -313,7 +296,7 @@ class DurakEnv:
     def game_over(self):
         return len(self.active_players) < self.MIN_PLAYERS
 
-    def get_turn_player(self) -> Optional[DurakPlayer]:
+    def get_turn_player(self) -> DurakPlayer:
         return self.turn_player
 
     def to_attack(self) -> bool:

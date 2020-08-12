@@ -1,20 +1,23 @@
-# main big2PPOSimulation class
-
-import numpy as np
 from PPONetwork import PPONetwork, PPOModel
-import tensorflow as tf
-import joblib
-from Deck import Deck
-from DurakEnv import DurakEnv
 from PPOPlayer import PPOPlayer
+from Types import Tuple, List
+from DurakEnv import DurakEnv
+from Deck import Deck
+
+import tensorflow as tf
+import numpy as np
 import logging
-import time
+import joblib
+import os
 
 
 class PPOTrainer(object):
 
-    def __init__(self, sess, *, games_per_batch=5, training_steps_per_game=5, lam=0.95, gamma=0.995, ent_coef=0.01, vf_coef=0.5,
-                 max_grad_norm=0.5, min_learning_rate=0.000001, learning_rate, clip_range, save_every=100):
+    def __init__(self, sess: tf.compat.v1.Session, *,
+                 games_per_batch: int = 5, training_steps_per_game: int = 5,
+                 lam: float = 0.95, gamma: float = 0.995, ent_coef: float = 0.01,
+                 vf_coef: float = 0.5, max_grad_norm: float = 0.5, min_learning_rate: float = 0.000001,
+                 learning_rate: float, clip_range: float, save_every: int = 100):
 
         # network/model for training
         output_dim = PPOPlayer.output_dim
@@ -36,6 +39,16 @@ class PPOTrainer(object):
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 1", self.playerNetworks[2]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])]
+
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[1].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[2].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[3].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[4].loadParams(params)
+
         # environment
         game = DurakEnv(self.players, False)
         self.state = game.reset()
@@ -75,18 +88,19 @@ class PPOTrainer(object):
 
         logging.info("finished PPO Trainers init")
 
-    def run(self):
+    def run(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         # run vectorized games for nSteps and generate mini batch to train on.
         mb_obs, mb_pGos, mb_actions, mb_values, mb_neglogpacs, mb_rewards, mb_dones, mb_availAcs = [], [], [], [], [], [], [], []
         done = False
         game = self.vectorizedGame
         state = game.reset()
-        while not done:
+        steps = 0
+        while not done and steps < 500:
             turn_player = game.get_turn_player()
             available_actions = game.get_available_actions()
             action = turn_player.get_action(state, game.to_attack())
             value, neglogpac = turn_player.get_val_neglogpac()
-            new_state, reward, done, info = game.step(action)  # update the game
+            new_state, reward, done = game.step(action)  # update the game
 
             # add to list
             mb_obs.append(turn_player.last_converted_state.flatten())
@@ -97,10 +111,10 @@ class PPOTrainer(object):
             mb_rewards.append(reward)
             mb_dones.append(done)
             mb_availAcs.append(turn_player.last_converted_available_cards.flatten())
-            self.epInfos.append(info)
 
             # update current state
             state = new_state
+            steps += 1
 
         # add dones to last plays
         for i in range(1, len(game.players) + 1):
@@ -118,9 +132,6 @@ class PPOTrainer(object):
         mb_neglogpacs = np.asarray(tuple(mb_neglogpacs), dtype=np.float64)
         mb_dones = np.asarray(tuple(mb_dones), dtype=np.bool)
 
-        # convert rewards to keep them in range
-        # mb_rewards /= self.rewardNormalization
-
         # discount/bootstrap value function with generalized advantage estimation:
         mb_returns = np.zeros_like(mb_rewards)
         mb_advs = np.zeros_like(mb_rewards)
@@ -136,9 +147,8 @@ class PPOTrainer(object):
         mb_returns = mb_advs + mb_values
 
         return mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs
-        # return map(sf01, (mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs))
 
-    def get_batch(self):
+    def get_batch(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         states, availAcs, returns, actions, values, neglogpacs = [], [], [], [], [], []
         for _ in range(self.games_per_batch):
             st, av, re, ac, va, ne = self.run()
@@ -161,12 +171,11 @@ class PPOTrainer(object):
 
         return states, availAcs, returns, actions, values, neglogpacs
 
-    def train(self, total_num_games):
+    def train(self, total_num_games: int) -> None:
 
         nUpdates = total_num_games // self.games_per_batch
 
         for update in range(1, nUpdates + 1):
-            print("Update", update, "out of", nUpdates)
 
             alpha = 1.0 - update / nUpdates
             lrnow = self.learningRate * alpha
@@ -179,7 +188,8 @@ class PPOTrainer(object):
             curr_params = self.trainingNetwork.getParams()
             mb_lossvals = []
 
-            for game_idx in range(self.games_per_batch):
+            # train on the games after shuffling them
+            for game_idx in np.random.randint(0, self.games_per_batch - 1, self.games_per_batch):
                 steps = 0
                 while steps + self.training_steps_per_game < states[game_idx].shape[0]:  # less than the amount of steps (actions) in the game
                     mb_inds = np.arange(steps, steps + self.training_steps_per_game)
@@ -187,9 +197,16 @@ class PPOTrainer(object):
                                                                 availAcs[game_idx][mb_inds], returns[game_idx][mb_inds],
                                                                 actions[game_idx][mb_inds], values[game_idx][mb_inds],
                                                                 neglogpacs[game_idx][mb_inds]))
-                    steps += self.training_steps_per_game
+                    if steps == states[game_idx].shape[0] - 1:
+                        break
+                    if steps + self.training_steps_per_game < states[game_idx].shape[0]:
+                        # basic step
+                        steps += self.training_steps_per_game
+                    else:
+                        # go over last indices, which are less than self.training_steps_per_game
+                        steps = states[game_idx].shape[0] - self.training_steps_per_game - 1
 
-            logging.info("Finished training in update num: %s" % update)
+            logging.info("Finished training in update num: %s" % update * self.games_per_batch)
 
             lossvals = np.mean(mb_lossvals, axis=0)
             self.losses.append(lossvals)
@@ -203,13 +220,22 @@ class PPOTrainer(object):
                     break
 
             if update % self.saveEvery == 0:
-                name = "PPOParams/model" + str(update)
+                name = "PPOParams/model" + str(update * self.games_per_batch)
                 self.trainingNetwork.saveParams(name)
                 joblib.dump(self.losses, "losses.pkl")
-                joblib.dump(self.epInfos, "epInfos.pkl")
 
-    def get_players(self):
+            print("finished " + str(update * self.games_per_batch))
+
+    def get_players(self) -> List[PPOPlayer]:
         return self.players
 
-    def get_learning_players_names(self):
+    def get_learning_players_names(self) -> List[str]:
         return [player.name for player in self.players]
+
+
+if __name__ == "__main__":
+    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
+    with tf.compat.v1.Session() as sess:
+        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=10)
+        mainSim.train(5000)
+    logging.shutdown()

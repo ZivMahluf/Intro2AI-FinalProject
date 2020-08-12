@@ -1,5 +1,6 @@
+from Types import CardType, CardListType, FieldType, TableType, StateType, List
 from Deck import Deck
-from typing import List, Tuple, Optional
+
 import numpy as np
 
 
@@ -18,7 +19,7 @@ class DurakPlayer:
         self.__name = name
         self.last_hand = []
 
-    def take_cards(self, cards: List[Deck.CardType]) -> None:
+    def take_cards(self, cards: CardListType) -> None:
         """
         Adds the cards to the hand.
         :param cards: A list of cards to add.
@@ -35,31 +36,31 @@ class DurakPlayer:
         suits.remove(suit)
         self._other_suits = suits
 
-    def get_action(self, state, to_attack):
+    def get_action(self, state: StateType, to_attack: bool) -> CardType:
         """
         Returns an action based on the given state and attack indicator.
-        :param state: (attacking cards, defending cards, legal attack cards, legal defence cards)
+        :param state: (attacking cards, defending cards, legal attack cards, legal defence cards, number of cards in deck, number of cards in each player's hand)
         :param to_attack: boolean flag indicating if the action is an attack or a defence.
         :return: chosen action.
         """
         self.last_hand = self.hand.copy()
         if to_attack:
-            return self.attack((state[0], state[1]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
-        return self.defend((state[0], state[1]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
+            return self.attack((state[0], state[1], state[4], state[5]), [card for card in state[2] if card in self._hand or card == Deck.NO_CARD])
+        return self.defend((state[0], state[1], state[4], state[5]), [card for card in state[3] if card in self._hand or card == Deck.NO_CARD])
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def attack(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         """
         Attacks with a legal card.
-        :param table: A tuple (attacking_cards, defending_cards) of cards on the table.
+        :param table: A tuple (attacking_cards, defending_cards, number of cards in the deck, list of number of cards in each player's hand) of cards on the table.
         :param legal_cards_to_play: A list of legal cards to play, consisting of cards in the player's hand and might also include Deck.NO_CARD.
         :return: The card with which the player attacks (the card is removed from the hand), or Deck.NO_CARD if the player does not attack with any card.
         """
         raise NotImplementedError()
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]], legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
+    def defend(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         """
         Defends with a legal card.
-        :param table: A tuple (attacking_cards, defending_cards) of cards on the table.
+        :param table: A tuple (attacking_cards, defending_cards, number of cards in the deck, list of number of cards in each player's hand) of cards on the table.
         :param legal_cards_to_play: A list of legal cards to play, consisting of cards in the player's hand, and Deck.NO_CARD.
         :return: The card with which the player defends (the card is removed from the hand), or Deck.NO_CARD if the player does not defend with any card.
         """
@@ -104,7 +105,7 @@ class DurakPlayer:
                     min_trump = value
         return min_trump
 
-    def get_weakest_card(self, cards: List[Deck.CardType]) -> Deck.CardType:
+    def get_weakest_card(self, cards: CardListType) -> CardType:
         """
         Chooses the weakest card from the given list of cards.
         The weakest card is the card with the lowest value.
@@ -113,7 +114,7 @@ class DurakPlayer:
         :return: The weakest card in the list.
         """
 
-        def get_card_value(card: Deck.CardType) -> int:
+        def get_card_value(card: CardType) -> int:
             if card == Deck.NO_CARD:
                 return np.inf
             else:
@@ -132,8 +133,7 @@ class DurakPlayer:
 
         return weakest
 
-    def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
-                         successfully_defended: bool) -> None:
+    def update_end_round(self, defending_player_name: str, table: FieldType, successfully_defended: bool) -> None:
         """
         Updates the agent about the result of the round - weather the defending player defended successfully or not.
         :param defending_player_name: Defending player's name
@@ -142,7 +142,7 @@ class DurakPlayer:
         """
         pass
 
-    def set_gui(self, gui):
+    def set_gui(self, gui) -> None:
         pass
 
     def initialize_for_game(self) -> None:
@@ -163,7 +163,7 @@ class DurakPlayer:
         return len(self._hand)
 
     @property
-    def hand(self) -> List[Deck.CardType]:
+    def hand(self) -> CardListType:
         """
         :return: A list of all cards currently in the hand of the player.
         """

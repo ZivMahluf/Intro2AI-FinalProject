@@ -46,11 +46,11 @@ class PPONetwork(object):
             available_moves = tf.compat.v1.placeholder(tf.float64, [None, act_dim], name="availableActions")
             # available_moves takes form [0, 0, -inf, 0, -inf...], 0 if action is available, -inf if not.
             activation = tf.nn.relu
-            h1 = activation(fc(X, 'fc1', nh=512, init_scale=np.sqrt(2)))
-            h2 = activation(fc(h1, 'fc2', nh=256, init_scale=np.sqrt(2)))
+            h1 = activation(fc(X, 'fc1', nh=128, init_scale=np.sqrt(2)))
+            h2 = activation(fc(h1, 'fc2', nh=64, init_scale=np.sqrt(2)))
             pi = fc(h2, 'pi', act_dim, init_scale=0.01)
             # value function - share layer h1
-            h3 = activation(fc(h1, 'fc3', nh=256, init_scale=np.sqrt(2)))
+            h3 = activation(fc(h1, 'fc3', nh=64, init_scale=np.sqrt(2)))
             vf = fc(h3, 'vf', 1)[:, 0]
         availPi = tf.add(pi, available_moves)
 
