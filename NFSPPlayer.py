@@ -169,7 +169,7 @@ class NFSPPlayer(DurakPlayer):
         # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
         self.round += 1
-        if self.update_time % self.round == 0:
+        if self.round % self.update_time == 0:
             self.update_target(self.current_model, self.target_model)
 
     def compute_sl_loss(self) -> None:
