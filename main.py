@@ -186,7 +186,7 @@ def plot_test_nsfp_vs_prev_version(subdir, test_games_per_model, title):
         print("Testing model 1 against untrained player ...")
         loss_ratios = do_test_games([curr_model, prev_model], test_games_per_model)
         loss_ratios_vs_prev_model.append(loss_ratios[curr_model.name])
-        i = 1
+        i = 2
         for model_name in model_names[1:]:
             print("Testing model", i, "against model", i - 1, "...")
             i += 1
