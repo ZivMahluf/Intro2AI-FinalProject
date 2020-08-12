@@ -72,7 +72,6 @@ class NFSPPlayer(DurakPlayer):
         else:
             self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
-        if self.is_best_response:
             self.reservoir_buffer.push(state, action)
 
         return NFSPPlayer.action_to_card(action)
