@@ -26,7 +26,7 @@ class NFSPPlayer(DurakPlayer):
         self.capacity = 100000  # 2400
         self.rl_learning_rate = 0.1  # paper 0.1 experience ? # high learning rate here make the current q value
         # more dominant (0.5, 0.7, 0.6
-        self.sl_learning_rate = 0.005   # 0.005 experience ? high learning rate here make
+        self.sl_learning_rate = 0.005    # 0.005 experience ? high learning rate here make   0.00005
         # the network memorize responses better (0.0005, 0.00075, 0.0025, 0.001
         super().__init__(hand_size, name)
         self.current_model = DQN(False)
@@ -48,14 +48,14 @@ class NFSPPlayer(DurakPlayer):
         # self.gamma = 1 # 0.99
         self.eta = 0.1  # todo : pick eta 0.1 experience 0.3
         self.eps_start = 0.9  # 0.9 paper 0.06 check which epsilon function to use
-        self.eps_final = 0.0001  # 0
+        self.eps_final = 0.0001  # 0.0001, 0.0005
         self.eps_decay = 10000  # todo : pick parameters that make sense, (10000, 10, )
         self.round = 1
         self.is_best_response = False
         self.batch_size = 32   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
         self.T = 5
-        self.update_time = 1500  # paper 300, (1500, 3000)
+        self.update_time = 1000  # paper 300, (1500, 3000)
         self.device = device
 
     def act(self, table, legal_cards_to_play):
@@ -166,7 +166,7 @@ class NFSPPlayer(DurakPlayer):
             # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
         self.round += 1
-        if self.update_time % self.round == 0:
+        if self.round % self.update_time == 0:
             self.update_target(self.current_model, self.target_model)
 
     def compute_sl_loss(self):
@@ -213,8 +213,8 @@ class NFSPPlayer(DurakPlayer):
         q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
         next_q_value = target_next_q_values.max(1)[0]
         # todo fix expected q-value
-        # expected_q_value = reward + (self.gamma ** self.round) * next_q_value
         expected_q_value = reward + next_q_value
+        # expected_q_value = reward + (next_q_value * 0.99999 ** self.round)
 
         # Huber Loss
         loss = F.smooth_l1_loss(
@@ -281,6 +281,6 @@ class NFSPPlayer(DurakPlayer):
         self.update_target(self.current_model, self.target_model)
 
     def load_network_from_other_by_reference(self, other):
-        self.policy = other.policy
-        self.current_model = other.current_model
+        self.update_target(other.policy, self.policy)
+        self.update_target(other.current_model, self.current_model)
         self.target_model = other.target_model
