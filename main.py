@@ -176,6 +176,7 @@ def plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_gam
         i += 1
     plt.legend(loc=figure_legend_loc)
     plt.savefig(title.replace('\n', '') + ".png")
+    learning_player.save_network('plot_train_and_test_nfsp')
 
 
 def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games_per_epoch, subdir, title):
@@ -216,6 +217,7 @@ def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games
         i += 1
     plt.legend(loc=figure_legend_loc)
     plt.savefig(title.replace('\n', '') + ".png")
+    learning_player.save_network('plot_train_and_test_nfsp_vs_prev_version')
 
 
 def generate_nfsp_plots():
