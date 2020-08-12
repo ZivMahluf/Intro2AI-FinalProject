@@ -1,13 +1,10 @@
-try:
-    import pygame
-except:
-    print("GUI not available")
-import os
-from math import sin, cos, radians
+from Types import List, Union, Tuple, FieldType
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
+from math import sin, cos, radians
 from Deck import Deck
-from typing import List, Union, Tuple
+import pygame
+import os
 
 
 class GUI:
@@ -84,8 +81,7 @@ class GUI:
         self.__initial_card_position = (self.__side_length // 2 - 3 * (self.__card_size[0] + self.__horizontal_space), self.__side_length // 2 - (3 * self.__card_size[1]) // 2)
         self.__deck_initial_pos = (self.__side_length // 2 - self.__card_size[0] // 2, self.__side_length // 2 + self.__card_size[1] // 2)
 
-    def show_screen(self, players: List[DurakPlayer], table: Tuple[Union[list, List[Deck.CardType]], Union[list, List[Deck.CardType]]],
-                    attacker: Union[DurakPlayer, None], defender: Union[DurakPlayer, None], deck: Deck, trump_suit: int) -> None:
+    def show_screen(self, players: List[DurakPlayer], table: FieldType, attacker: Union[DurakPlayer, None], defender: Union[DurakPlayer, None], deck: Deck, trump_suit: int) -> None:
         """
         Shows the current state of the game.
         :param players: A list of the players in the game.
@@ -162,18 +158,11 @@ class GUI:
         pygame.display.flip()
 
     @staticmethod
-    def dispose_events():
+    def dispose_events() -> None:
+        """
+        Disposes of the accumulated pygame events.
+        """
         pygame.event.get()
-
-    @staticmethod
-    def pressed_quit() -> bool:
-        """
-        :return: Weather the user pressed the 'x' button on the pygame window.
-        """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return True
-        return False
 
     @staticmethod
     def end() -> None:
