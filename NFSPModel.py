@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
-from typing import List
 
 import random
 
@@ -13,7 +11,7 @@ INPUT_SHAPE = (INPUT_SIZE,)
 HIDDEN_LAYER_DIM = 37  # todo maybe 32, 64
 
 
-def DQN(is_dueling):
+def DQN():
     return DQNBase()
 
 
@@ -32,19 +30,6 @@ class DQNBase(nn.Module):
         self.input_shape = INPUT_SHAPE
         self.num_actions = NUM_ACTIONS  # todo - make constant somewhere
         self.hidden_layer_dim = HIDDEN_LAYER_DIM
-
-        # self.fc = nn.Sequential(
-        #     nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.num_actions),
-        #     nn.ReLU(),
-        # )
 
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
@@ -70,20 +55,6 @@ class DQNBase(nn.Module):
             nn.Linear(self.hidden_layer_dim, self.num_actions),
             nn.ReLU(),
         )
-
-
-        # self.fc = nn.Sequential(
-        #     nn.Linear(INPUT_SIZE, 512),
-        #     nn.ReLU(),
-        #     nn.Linear(512, 256),
-        #     nn.ReLU(),
-        #     nn.Linear(256, 512),
-        #     nn.ReLU(),
-        #     nn.Linear(512, 256),
-        #     nn.ReLU(),
-        #     nn.Linear(256, self.num_actions),
-        #     nn.ReLU(),
-        # )
 
     def forward(self, x):
         x = self.fc(x)
@@ -116,25 +87,6 @@ class Policy(DQNBase):
 
     def __init__(self):
         super(Policy, self).__init__()
-        # self.fc = nn.Sequential(
-        #     nn.Linear(INPUT_SIZE, 32),
-        #     nn.ReLU(),
-        #     nn.Linear(32, self.num_actions),
-        #     nn.Softmax(dim=1)
-        # )
-        # self.fc = nn.Sequential(
-        #     nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.hidden_layer_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_layer_dim, self.num_actions),
-        #     nn.Softmax(dim=1),
-        #     nn.ReLU(),
-        # )
 
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, self.hidden_layer_dim),
@@ -163,7 +115,7 @@ class Policy(DQNBase):
             nn.Softmax(dim=1),
         )
 
-    def act(self, state, legal_cards):
+    def act(self, state, epsilon, legal_cards):
         """
         Parameters
         ----------
