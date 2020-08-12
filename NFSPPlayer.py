@@ -72,7 +72,6 @@ class NFSPPlayer(DurakPlayer):
         else:
             self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
-            self.reservoir_buffer.push(state, action)
 
         return NFSPPlayer.action_to_card(action)
 
@@ -164,6 +163,8 @@ class NFSPPlayer(DurakPlayer):
         _, new_input = self.get_network_input(legal_new_cards, (new_state[0], new_state[1], new_state[4], new_state[5]), self.discard_pile, self._hand)
         self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
             action), reward, new_input, 0)
+        if self.is_best_response:
+            self.reservoir_buffer.push(old_input, NFSPPlayer.card_numeric_rep(action))
         self.compute_sl_loss()
         # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
