@@ -1,22 +1,23 @@
-# main big2PPOSimulation class
-
-import numpy as np
 from PPONetwork import PPONetwork, PPOModel
-import tensorflow as tf
-import joblib
-from Deck import Deck
-from DurakEnv import DurakEnv
 from PPOPlayer import PPOPlayer
-from DefensivePlayer import DefensivePlayer
+from Types import Tuple, List
+from DurakEnv import DurakEnv
+from Deck import Deck
+
+import tensorflow as tf
+import numpy as np
 import logging
-import time
+import joblib
 import os
 
 
 class PPOTrainer(object):
 
-    def __init__(self, sess, *, games_per_batch=5, training_steps_per_game=5, lam=0.95, gamma=0.995, ent_coef=0.01, vf_coef=0.5,
-                 max_grad_norm=0.5, min_learning_rate=0.000001, learning_rate, clip_range, save_every=100):
+    def __init__(self, sess: tf.compat.v1.Session, *,
+                 games_per_batch: int = 5, training_steps_per_game: int = 5,
+                 lam: float = 0.95, gamma: float = 0.995, ent_coef: float = 0.01,
+                 vf_coef: float = 0.5, max_grad_norm: float = 0.5, min_learning_rate: float = 0.000001,
+                 learning_rate: float, clip_range: float, save_every: int = 100):
 
         # network/model for training
         output_dim = PPOPlayer.output_dim
@@ -39,14 +40,14 @@ class PPOTrainer(object):
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])]
 
-        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        self.playerNetworks[1].loadParams(params)
-        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        self.playerNetworks[2].loadParams(params)
-        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        self.playerNetworks[3].loadParams(params)
-        params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        self.playerNetworks[4].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[1].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[2].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[3].loadParams(params)
+        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
+        # self.playerNetworks[4].loadParams(params)
 
         # environment
         game = DurakEnv(self.players, False)
@@ -87,7 +88,7 @@ class PPOTrainer(object):
 
         logging.info("finished PPO Trainers init")
 
-    def run(self):
+    def run(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         # run vectorized games for nSteps and generate mini batch to train on.
         mb_obs, mb_pGos, mb_actions, mb_values, mb_neglogpacs, mb_rewards, mb_dones, mb_availAcs = [], [], [], [], [], [], [], []
         done = False
@@ -146,9 +147,8 @@ class PPOTrainer(object):
         mb_returns = mb_advs + mb_values
 
         return mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs
-        # return map(sf01, (mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs))
 
-    def get_batch(self):
+    def get_batch(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         states, availAcs, returns, actions, values, neglogpacs = [], [], [], [], [], []
         for _ in range(self.games_per_batch):
             st, av, re, ac, va, ne = self.run()
@@ -171,7 +171,7 @@ class PPOTrainer(object):
 
         return states, availAcs, returns, actions, values, neglogpacs
 
-    def train(self, total_num_games):
+    def train(self, total_num_games: int) -> None:
 
         nUpdates = total_num_games // self.games_per_batch
 
@@ -226,10 +226,10 @@ class PPOTrainer(object):
 
             print("finished " + str(update * self.games_per_batch))
 
-    def get_players(self):
+    def get_players(self) -> List[PPOPlayer]:
         return self.players
 
-    def get_learning_players_names(self):
+    def get_learning_players_names(self) -> List[str]:
         return [player.name for player in self.players]
 
 
