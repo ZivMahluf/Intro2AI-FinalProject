@@ -1,8 +1,9 @@
+from Types import List, Tuple, NumberType, StateType
 from DurakPlayer import DurakPlayer
 from HumanPlayer import HumanPlayer
-from typing import List, Tuple, Union, Optional
 from Deck import Deck
 from GUI import GUI
+
 import random
 
 
@@ -11,11 +12,6 @@ class DurakEnv:
     MIN_PLAYERS = 2
     MAX_PLAYERS = 6
     HAND_SIZE = 6
-
-    CardListType = List[Deck.CardType]
-    # attacking cards, defending cards, legal attack cards, legal defence cards, number of cards in deck, number of cards in each player's hand
-    StateType = Tuple[CardListType, CardListType, CardListType, CardListType, int, List[int]]
-    NumberType = Union[int, float]
 
     def __init__(self, players: List[DurakPlayer], render=False):
         # non-changing parameters:
@@ -126,7 +122,7 @@ class DurakEnv:
             self.do_attack_phase()
         else:
             self.do_defence_phase()
-        self.reward = self.calculate_reward()
+        self.calculate_reward()
         self.check_end_round()
         if self.reset_round:
             self.update_end_round_players()
@@ -268,26 +264,13 @@ class DurakEnv:
                len([c for c in self.turn_player.last_hand if c[1] == self.trump_suit])
 
     def calculate_reward(self):
-        # suits_avg_change = self.calculate_average_change(for_trump=False) / 27
-        # trumps_avg_change = self.calculate_average_change(for_trump=True) / 9
-        # diff_in_trump_cards = self.difference_in_trump_cards() / 9
-
-        # small reward on success defense
-        # neg reward on taking cards
         if not self.turn_player.hand_size and not self.deck.current_num_cards:
-            return 30
-
+            self.reward = 30
         if not self.defending:
             if self.successful:
-                return 1
+                self.reward = 1
             else:
-                return -1
-
-        return 0
-
-        # sum_all = (0.4 * suits_avg_change + 0.6 * (trumps_avg_change * 0.4 + diff_in_trump_cards * 0.6)) * 100
-        # if self.turn_player.hand_size == 0:
-        #     sum_all += 1000
+                self.reward = -1
 
     def check_end_round(self):
         if not self.defending:
@@ -313,7 +296,7 @@ class DurakEnv:
     def game_over(self):
         return len(self.active_players) < self.MIN_PLAYERS
 
-    def get_turn_player(self) -> Optional[DurakPlayer]:
+    def get_turn_player(self) -> DurakPlayer:
         return self.turn_player
 
     def to_attack(self) -> bool:
