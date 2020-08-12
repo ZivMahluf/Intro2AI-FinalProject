@@ -239,7 +239,7 @@ def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games
         plt.plot(x_axis, loss_ratios_per_test_list[key], color=colors[i], label=key)
         i += 1
     plt.legend(loc=figure_legend_loc)
-    # plt.savefig(title.replace('\n', '') + ".png")
+    plt.savefig(title.replace('\n', '') + ".png")
 
 
 def generate_nfsp_plots():
