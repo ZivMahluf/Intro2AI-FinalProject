@@ -139,10 +139,12 @@ def plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_gam
     if os.path.exists(os.path.join(nfsp_saved_models_dir, subdir)):
         shutil.rmtree(os.path.join(nfsp_saved_models_dir, subdir))
     os.mkdir(os.path.join(nfsp_saved_models_dir, subdir))
+    prev_player = NFSPPlayer(hand_size, "Prev Player")
     test_players_lists = {"vs. Training Players": training_players,
                           "vs. 1 Defensive Player": [DefensivePlayer(hand_size, "Defensive Test Player")],
                           "vs. 1 Aggressive Player": [AggressivePlayer(hand_size, "Aggressive Test Player")],
-                          "vs. 1 Random Player": [RandomPlayer(hand_size, "Random Test Player")]}
+                          "vs. 1 Random Player": [RandomPlayer(hand_size, "Random Test Player")],
+                          "vs. Previous Version": [prev_player]}
     loss_ratios_per_test_list = {key: list() for key in test_players_lists.keys()}
     learning_player = NFSPPlayer(hand_size, "Learning Player")
     base_name = os.path.join(subdir, "Model")
@@ -155,6 +157,7 @@ def plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_gam
         loss_ratios_per_test_list[key].append(loss_ratios[learning_player.name])
     for epoch in range(1, epochs + 1):
         print("Epoch", epoch, "out of", epochs)
+        prev_player.load_network_from_other_by_reference(learning_player)
         print("Training...")
         trainer.train(games_per_epoch)
         x_axis.append(epoch * games_per_epoch)
@@ -173,33 +176,6 @@ def plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_gam
         i += 1
     plt.legend(loc=figure_legend_loc)
     plt.savefig(title.replace('\n', '') + ".png")
-
-
-def plot_test_nsfp_vs_prev_version(subdir, test_games_per_model, title):
-    model_names = os.listdir(os.path.join(nfsp_saved_models_dir, subdir))
-    num_models = len(model_names)
-    if num_models > 1:
-        curr_model = TrainedNFSPPlayer(hand_size, "Current Model")
-        curr_model.load_model(os.path.join(subdir, model_names[0]))
-        prev_model = TrainedNFSPPlayer(hand_size, "Previous Model")  # starts as a random model
-        loss_ratios_vs_prev_model = []
-        print("Testing model 1 against untrained player ...")
-        loss_ratios = do_test_games([curr_model, prev_model], test_games_per_model)
-        loss_ratios_vs_prev_model.append(loss_ratios[curr_model.name])
-        i = 2
-        for model_name in model_names[1:]:
-            print("Testing model", i, "against model", i - 1, "...")
-            i += 1
-            prev_model.load_from_other_player(curr_model)
-            curr_model.load_model(os.path.join(subdir, model_name))
-            loss_ratios = do_test_games([curr_model, prev_model], test_games_per_model)
-            loss_ratios_vs_prev_model.append(loss_ratios[curr_model.name])
-        plt.figure(figsize=figure_size)
-        plt.title(title)
-        plt.xlabel("Current Model Number")
-        plt.ylabel("Loss Ratio in % Against Previous Model")
-        plt.plot(loss_ratios_vs_prev_model, color=colors[12])
-        plt.savefig(title.replace('\n', '') + ".png")
 
 
 def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games_per_epoch, subdir, title):
@@ -243,8 +219,8 @@ def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games
 
 
 def generate_nfsp_plots():
-    games_per_batch = 25
-    num_models = 100  # number of models to save and test, also the number of epochs for the NFSP player
+    games_per_batch = 100
+    num_models = 25  # number of models to save and test, also the number of epochs for the NFSP player
     test_games = 20
     random_1 = RandomPlayer(hand_size, "Random 1")
     random_2 = RandomPlayer(hand_size, "Random 2")
@@ -264,7 +240,6 @@ def generate_nfsp_plots():
                                    "Loss Ratio of Each Model Against Previous Model \nTrained With 3 Defensive Players"]
     for training_players, subdirectory, train_test_case_title, test_vs_prev_version_title in zip(training_players_lists, subdirectories, train_test_cases_titles, test_vs_prev_version_titles):
         plot_train_and_test_nfsp(training_players, num_models, games_per_batch, test_games, subdirectory, train_test_case_title)
-        plot_test_nsfp_vs_prev_version(subdirectory, test_games, test_vs_prev_version_title)
     plot_train_and_test_nfsp_vs_prev_version(num_models, games_per_batch, test_games, "Prev-Version",
                                              "Loss Ratios of NFSP Player Trained Against the Previous Version of Itself")
 
@@ -283,10 +258,10 @@ def run_example_game():
 
 
 def main():
-    # run_example_game()
-    # generate_ppo_plots()
+    run_example_game()
+    generate_ppo_plots()
     generate_nfsp_plots()
-    # plt.show()
+    plt.show()
 
 
 if __name__ == '__main__':
