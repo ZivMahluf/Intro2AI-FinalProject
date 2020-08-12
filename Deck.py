@@ -1,6 +1,6 @@
+from Types import CardType, CardListType
 from itertools import product
 import numpy as np
-from typing import Tuple, List
 
 
 class Deck:
@@ -20,10 +20,6 @@ class Deck:
     SUITS = [HEARTS, CLUBS, DIAMONDS, SPADES]
     VALUES = [6, 7, 8, 9, 10, JACK, QUEEN, KING, ACE]
     NO_CARD = (-1, -1)
-    """
-    Custom card type.
-    """
-    CardType = Tuple[int, int]
 
     def __init__(self):
         """
@@ -32,7 +28,7 @@ class Deck:
         self.__deck = self.get_full_list_of_cards()
         self.__total_size = len(self.__deck)
 
-    def draw(self, cards: int = 1) -> List[CardType]:
+    def draw(self, cards: int = 1) -> CardListType:
         """
         Draws the specified number of cards.
         :param cards: Number of cards to draw.
@@ -42,14 +38,7 @@ class Deck:
         dealt_cards = [self.__deck.pop() for _ in range(min(cards, size))]
         return dealt_cards
 
-    def to_bottom(self, card: CardType) -> None:
-        """
-        Puts the given card to the bottom of the deck.
-        :param card: Card to put to the bottom.
-        """
-        self.__deck.insert(0, card)
-
-    def shuffle(self):
+    def shuffle(self) -> None:
         np.random.shuffle(self.__deck)
 
     @property
@@ -67,27 +56,35 @@ class Deck:
         return self.__total_size
 
     @property
-    def cards(self) -> List[Tuple[int, int]]:
+    def cards(self) -> CardListType:
         """
         :return: A list of all cards in the deck.
         """
         return self.__deck
 
     @staticmethod
-    def get_full_list_of_cards():
+    def get_full_list_of_cards() -> CardListType:
         """
         :return: A list of all cards in a deck.
         """
         return list(product(Deck.VALUES, Deck.SUITS))
 
     @staticmethod
-    def get_index_from_card(card):
+    def get_index_from_card(card: CardType) -> int:
+        """
+        :param card: Legal card that appears in the deck.
+        :return: Index of the card in a full deck (not shuffled)
+        """
         if card == Deck.NO_CARD:
             return Deck().total_num_cards
         return Deck.get_full_list_of_cards().index(card)
 
     @staticmethod
-    def get_card_from_index(index):
+    def get_card_from_index(index: int) -> CardType:
+        """
+        :param index: index in range [0, len(full_deck_of_cards)]
+        :return: Card at the given index in a full non-shuffled deck
+        """
         if index == Deck().total_num_cards:
             return Deck.NO_CARD
         return Deck.get_full_list_of_cards()[index]
