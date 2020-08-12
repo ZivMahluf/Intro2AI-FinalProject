@@ -7,7 +7,7 @@ from DurakPlayer import DurakPlayer
 from NFSPPlayer import NFSPPlayer
 from PPOPlayer import PPOPlayer
 
-from Types import List, Tuple, NumberType
+from Types import List
 from NFSPTrainer import NFSPTrainer
 from PPOTrainer import PPOTrainer
 from PPONetwork import PPONetwork
@@ -24,7 +24,6 @@ colors = ["gray", "yellowgreen", "blue", "brown", "deeppink", "red", "coral", "p
           "yellow", "forestgreen", "lime", "darkslategray", "cyan", "dodgerblue", "royalblue", "indigo", "purple"]
 figure_size = (20, 10.65625)
 figure_legend_loc = 'upper right'
-Color = Tuple[float, float, float]
 hand_size = DurakEnv.HAND_SIZE
 nfsp_saved_models_dir = os.path.join(os.getcwd(), "NFSP-models")
 ppo_saved_models_dir = os.path.join(os.getcwd(), "PPOParams")
