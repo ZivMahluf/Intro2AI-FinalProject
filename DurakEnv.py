@@ -265,12 +265,13 @@ class DurakEnv:
 
     def calculate_reward(self):
         if not self.turn_player.hand_size and not self.deck.current_num_cards:
-            self.reward = 30
+            self.reward = 5
         if not self.defending:
             if self.successful:
                 self.reward = 1
             else:
                 self.reward = -1
+        return 0
 
     def check_end_round(self):
         if not self.defending:
