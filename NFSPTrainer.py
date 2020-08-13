@@ -38,3 +38,6 @@ class NFSPTrainer:
                 self.env.render()
                 if done or count > 300:
                     break
+            for player in self.env.players:
+                if player is NFSPPlayer:
+                    player.end_game()

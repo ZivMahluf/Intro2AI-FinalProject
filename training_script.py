@@ -193,7 +193,7 @@ def train_against_prev_iter_test_aginst_def(epochs=50, training_games_per_epoch=
 #     learning_player1.save_network('train_against_two_randoms\9')
 #     plt.savefig('new_try6.jpg')
 
-def train_against_one_random(epochs=1000, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
+def train_against_one_random(epochs=5, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
     # define players for learning phase
     learning_player1 = NFSPPlayer(hand_size, 'NFSP-PLAYER-1', 'cpu')
     learning_players = [learning_player1]

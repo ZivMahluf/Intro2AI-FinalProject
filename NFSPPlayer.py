@@ -180,6 +180,11 @@ class NFSPPlayer(DurakPlayer):
         if self.round % self.update_time == 0:
             self.update_target(self.current_model, self.target_model)
 
+    def end_game(self):
+        state, action, reward, next_state, legal_cards, done = self.replay_buffer.buffer.pop()
+        done = 1
+        self.replay_buffer.push(state, action, reward, next_state, legal_cards, done)
+
     def compute_sl_loss(self) -> None:
         """
         Update policy neural network
@@ -229,7 +234,7 @@ class NFSPPlayer(DurakPlayer):
         next_q_value = torch.FloatTensor([max(next_q_value)]).to(self.device)
         # todo fix expected q-value
         # expected_q_value = reward + (self.gamma ** self.round) * next_q_value
-        expected_q_value = reward + next_q_value
+        expected_q_value = reward + (next_q_value * (1-done)) 
 
         # Huber Loss
         loss = F.smooth_l1_loss(
