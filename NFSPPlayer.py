@@ -28,9 +28,9 @@ class NFSPPlayer(DurakPlayer):
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
         self.capacity = 15000  # 2400
-        self.rl_learning_rate = 0.1  # paper 0.1 experience ? # high learning rate here make the current q value
+        self.rl_learning_rate = 0.05  # paper 0.1 experience ? # high learning rate here make the current q value tried 0.01
         # more dominant (0.5, 0.7, 0.6
-        self.sl_learning_rate = 0.005   # 0.005 experience ? high learning rate here make
+        self.sl_learning_rate = 0.001   # 0.005 experience ? high learning rate here make
         # the network memorize responses better (0.0005, 0.00075, 0.0025, 0.001
         super().__init__(hand_size, name)
         self.current_model = DQN()
@@ -184,7 +184,7 @@ class NFSPPlayer(DurakPlayer):
     def end_game(self):
         state, action, reward, next_state, legal_cards, done = self.replay_buffer.buffer.pop()
         if reward < 20:
-            reward = -2
+            reward = -10
         done = 1
         self.replay_buffer.buffer.append((state, action, reward, next_state, legal_cards, done))
 
