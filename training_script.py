@@ -2,7 +2,9 @@ from main import *
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from multiprocessing import Process
+from os import *
+
+
 
 
 def plot(x_axis, y_axes, title: str, x_label: str, y_label: str, legend: bool):
@@ -239,9 +241,10 @@ def train_against_prev_iter_test_aginst_def(epochs=50, training_games_per_epoch=
 #     learning_player1.save_network('train_against_two_randoms\9')
 #     plt.savefig('new_try6.jpg')
 
-def train_against_one_random(epochs=50, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
+def train_against_one_random(epochs=25, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
     # define players for learning phase
     directory = "train_against_one_random/"
+    os.mkdir("./NFSP-models/"+directory)
     learning_player1 = NFSPPlayer(hand_size, 'NFSP-PLAYER-1', 'cpu')
     learning_players = [learning_player1]
     random1 = RandomPlayer(hand_size, 'random-1')
@@ -287,9 +290,11 @@ def train_against_one_random(epochs=50, training_games_per_epoch=50, test_games_
     plt.savefig('train_against_random.jpg')
 
 
-def train_against_nfsp_agent(epochs=50, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
+def train_against_nfsp_agent(epochs=25, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
 
     directory = "train_against_nfsp/"
+    os.mkdir("./NFSP-models/"+directory)
+
     # define players for learning phase
     learning_player1 = NFSPPlayer(hand_size, 'NFSP-PLAYER-1', 'cpu')
     learning_player2 = NFSPPlayer(hand_size, 'NFSP-PLAYER-2', 'cpu')
@@ -341,12 +346,8 @@ def train_against_nfsp_agent(epochs=50, training_games_per_epoch=50, test_games_
 
 
 if __name__ == '__main__':
-    p1 = Process(target=train_against_nfsp_agent, args=())
-    p2 = Process(target=train_against_one_random, args=())
-    p1.start()
-    p2.start()
-    p1.join()
-    p2.join()
+    train_against_nfsp_agent()
+    train_against_one_random()
     # train_against_prev_iter()
     # train_against_two_randoms()
     # train_against_one_randoms()
