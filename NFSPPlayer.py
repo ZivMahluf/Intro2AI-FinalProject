@@ -9,6 +9,7 @@ import math as m
 import random
 import torch
 import os
+import numpy as np
 
 from Deck import Deck
 from typing import Tuple, List
@@ -60,6 +61,9 @@ class NFSPPlayer(DurakPlayer):
         self.T = 5
         self.update_time = 1500  # paper 300, (1500, 3000)
         self.device = device
+        self.prev_reward = None
+        self.prev_state = None
+        self.prev_action = None
 
     def act(self, table: TableType, legal_cards_to_play: CardListType):
         """
@@ -72,6 +76,8 @@ class NFSPPlayer(DurakPlayer):
         else:
             self.is_best_response = True
             action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
+        if self.prev_state:
+            self.replay_buffer.push(self.prev_state, self.prev_action, self.prev_reward, state, legal_cards_vec, 0)
 
         return NFSPPlayer.action_to_card(action)
 
@@ -161,8 +167,10 @@ class NFSPPlayer(DurakPlayer):
                                if card in self._hand or card == Deck.NO_CARD]
         _, old_input = self.get_network_input(legal_old_cards, (old_state[0], old_state[1], old_state[4], old_state[5]), self.discard_pile, old_hand)
         _, new_input = self.get_network_input(legal_new_cards, (new_state[0], new_state[1], new_state[4], new_state[5]), self.discard_pile, self._hand)
-        self.replay_buffer.push(old_input, NFSPPlayer.card_numeric_rep(
-            action), reward, new_input, 0)
+        self.prev_state = old_input
+        self.prev_action = NFSPPlayer.card_numeric_rep(action)
+        self.prev_reward = reward
+
         if self.is_best_response:
             self.reservoir_buffer.push(old_input, NFSPPlayer.card_numeric_rep(action))
         self.compute_sl_loss()
@@ -198,7 +206,9 @@ class NFSPPlayer(DurakPlayer):
         Update current_model neural network
         """
         batch_size = min(self.batch_size, len(self.replay_buffer))
-        state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
+        if batch_size == 0:
+            return
+        state, action, reward, next_state, legal_cards, done = self.replay_buffer.sample(batch_size)
         weights = torch.ones(batch_size)
 
         state = torch.FloatTensor(state).to(self.device)
@@ -207,13 +217,16 @@ class NFSPPlayer(DurakPlayer):
         reward = torch.FloatTensor(reward).to(self.device)
         done = torch.FloatTensor(done).to(self.device)
         weights = torch.FloatTensor(weights).to(self.device)
+        legal_cards = np.array(legal_cards).flatten()
 
         # Q-Learning with target network
         q_values = self.current_model.forward(state)
         target_next_q_values = self.target_model.forward(next_state)
 
         q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
-        next_q_value = target_next_q_values.max(1)[0]
+        next_q_value = target_next_q_values.cpu().detach().numpy().flatten()
+        next_q_value[np.array(legal_cards) == 0] = -1 * float('inf')
+        next_q_value = torch.FloatTensor([max(next_q_value)]).to(self.device)
         # todo fix expected q-value
         # expected_q_value = reward + (self.gamma ** self.round) * next_q_value
         expected_q_value = reward + next_q_value
@@ -246,6 +259,9 @@ class NFSPPlayer(DurakPlayer):
         """
         super().initialize_for_game()
         self.discard_pile = [0]*36
+        self.prev_reward = None
+        self.prev_action = None
+        self.prev_state = None
 
     def save_network(self, name: str) -> None:
         """

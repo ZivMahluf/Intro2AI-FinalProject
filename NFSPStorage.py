@@ -9,15 +9,14 @@ class ReplayBuffer(object):
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
 
-    def push(self, state, action, reward, next_state, done):
+    def push(self, state, action, reward, next_state, legal_cards, done):
         state = np.expand_dims(state, axis=0)
         next_state = np.expand_dims(next_state, axis=0)
-
-        self.buffer.append((state, action, reward, next_state, done))
+        self.buffer.append((state, action, reward, next_state, legal_cards, done))
 
     def sample(self, batch_size):
-        state, action, reward, next_state, done = zip(*random.sample(self.buffer, batch_size))
-        return np.concatenate(state), action, reward, np.concatenate(next_state), done
+        state, action, reward, next_state, legal_cards, done = zip(*random.sample(self.buffer, batch_size))
+        return np.concatenate(state), action, reward, np.concatenate(next_state), legal_cards, done
 
     def __len__(self):
         return len(self.buffer)
