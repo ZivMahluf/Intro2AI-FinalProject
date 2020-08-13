@@ -71,8 +71,6 @@ class NFSPPlayer(DurakPlayer):
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         if self.prev_state:
             self.replay_buffer.push(self.prev_state, self.prev_action, self.prev_reward, state, legal_cards_vec, 0)
-        # if self.round % self.T == 0:
-        #     self.is_best_response = random.random() > self.eta
 
         if not self.is_best_response:
             action = self.policy.act(torch.FloatTensor(state).to(self.device), 0, legal_cards_vec)
