@@ -34,6 +34,8 @@ class DQNBase(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, 256),
             nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
@@ -80,6 +82,8 @@ class Policy(DQNBase):
 
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
             nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
