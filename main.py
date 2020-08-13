@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import shutil
 import joblib
+import sys
 import os
 
 
@@ -60,10 +61,10 @@ def train_ppo(sess, games_per_batch, save_every, training_games):
     :param save_every: frequency of saving the model parameters (saved every save_every batches)
     :param training_games: total number of training games to train for
     """
-    # Resets the folder of the saved parameters
-    if os.path.exists(ppo_saved_models_dir):
-        shutil.rmtree(ppo_saved_models_dir)
-    os.mkdir(ppo_saved_models_dir)
+    # Resets the folder of the saved parameters (uncomment to enable reset directory)
+    # if os.path.exists(ppo_saved_models_dir):
+    #     shutil.rmtree(ppo_saved_models_dir)
+    # os.mkdir(ppo_saved_models_dir)
     trainer = PPOTrainer(sess,
                          games_per_batch=games_per_batch,
                          training_steps_per_game=25,
@@ -129,10 +130,10 @@ def generate_ppo_plots():
     games_per_batch = 20
     save_every = 5
     num_models = 100  # number of models to save and test
-    test_games = 50
+    test_games_per_saved_model = 50
     with tf.compat.v1.Session() as sess:
         train_ppo(sess, games_per_batch=games_per_batch, save_every=save_every, training_games=games_per_batch * save_every * num_models)
-        plot_trained_ppo_player_vs_test_cases(sess, "Loss Ratios of PPO Player", test_games)
+        plot_trained_ppo_player_vs_test_cases(sess, "Loss Ratios of PPO Player", test_games_per_saved_model)
 
 
 def plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_games_per_epoch, subdir, title):
@@ -221,9 +222,9 @@ def plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games
 
 
 def generate_nfsp_plots():
-    games_per_batch = 100
-    num_models = 25  # number of models to save and test, also the number of epochs for the NFSP player
-    test_games = 20
+    games_per_epoch = 100
+    epochs = 25  # number of models to save and test, also the number of epochs for the NFSP player
+    test_games_per_epoch = 20
     random_1 = RandomPlayer(hand_size, "Random 1")
     random_2 = RandomPlayer(hand_size, "Random 2")
     defensive_1 = DefensivePlayer(hand_size, "Defensive 1")
@@ -241,8 +242,8 @@ def generate_nfsp_plots():
                                    "Loss Ratio of Each Model Against Previous Model \nTrained With 1 Defensive Player",
                                    "Loss Ratio of Each Model Against Previous Model \nTrained With 3 Defensive Players"]
     for training_players, subdirectory, train_test_case_title, test_vs_prev_version_title in zip(training_players_lists, subdirectories, train_test_cases_titles, test_vs_prev_version_titles):
-        plot_train_and_test_nfsp(training_players, num_models, games_per_batch, test_games, subdirectory, train_test_case_title)
-    plot_train_and_test_nfsp_vs_prev_version(num_models, games_per_batch, test_games, "Prev-Version",
+        plot_train_and_test_nfsp(training_players, epochs, games_per_epoch, test_games_per_epoch, subdirectory, train_test_case_title)
+    plot_train_and_test_nfsp_vs_prev_version(epochs, games_per_epoch, test_games_per_epoch, "Prev-Version",
                                              "Loss Ratios of NFSP Player Trained Against the Previous Version of Itself")
 
 
@@ -260,10 +261,28 @@ def run_example_game():
 
 
 def main():
-    run_example_game()
-    generate_ppo_plots()
-    generate_nfsp_plots()
-    plt.show()
+    example = '0'
+    ppo = '1'
+    nfsp = '2'
+    ppo_and_nfsp = '3'
+    arg = sys.argv[1] if len(sys.argv) >= 2 else '0'
+    show = False if len(sys.argv) < 3 or sys.argv[2] == 'f' else True
+    if arg == example:
+        print("Running example game")
+        run_example_game()
+    else:
+        if show:
+            print("Generated plots will be shown")
+        else:
+            print("Generated plots will not be shown")
+        if arg in [ppo, ppo_and_nfsp]:
+            print("Training and generating plots for the PPO player...")
+            generate_ppo_plots()
+        if arg in [nfsp, ppo_and_nfsp]:
+            print("Training and generating plots for the NFSP player...")
+            generate_nfsp_plots()
+        if show:
+            plt.show()
 
 
 if __name__ == '__main__':
