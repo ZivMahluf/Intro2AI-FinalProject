@@ -27,7 +27,7 @@ class NFSPPlayer(DurakPlayer):
         # todo pick storage size that is large enough
         # in a game of 3 random players on average there are 120 steps per game. so for storing
         # data for 25 games we should store 20 * 120 = 2400 steps
-        self.capacity = 100000  # 2400
+        self.capacity = 15000  # 2400
         self.rl_learning_rate = 0.1  # paper 0.1 experience ? # high learning rate here make the current q value
         # more dominant (0.5, 0.7, 0.6
         self.sl_learning_rate = 0.005   # 0.005 experience ? high learning rate here make
@@ -52,13 +52,12 @@ class NFSPPlayer(DurakPlayer):
         # self.gamma = 1 # 0.99
         self.eta = 0.1  # todo : pick eta 0.1 experience 0.3
         self.eps_start = 0.9  # 0.9 paper 0.06 check which epsilon function to use
-        self.eps_final = 0.0001  # 0
-        self.eps_decay = 10000  # todo : pick parameters that make sense, (10000, 10, )
+        self.eps_final = 0.0001  # 0.0001
+        self.eps_decay = 30000  # todo : pick parameters that make sense, (10000, 10, )
         self.round = 1
-        self.is_best_response = False
+        self.is_best_response = True
         self.batch_size = 128   # todo check for the best batch size (paper 128)
         self.discard_pile = [0]*36
-        self.T = 5
         self.update_time = 1500  # paper 300, (1500, 3000)
         self.device = device
         self.prev_reward = None
@@ -70,14 +69,16 @@ class NFSPPlayer(DurakPlayer):
         get action
         """
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
-        self.is_best_response = False
-        if random.random() > self.eta:
-            action = self.policy.act(torch.FloatTensor(state).to(self.device), 0, legal_cards_vec)
-        else:
-            self.is_best_response = True
-            action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
         if self.prev_state:
             self.replay_buffer.push(self.prev_state, self.prev_action, self.prev_reward, state, legal_cards_vec, 0)
+        # if self.round % self.T == 0:
+        #     self.is_best_response = random.random() > self.eta
+
+        if not self.is_best_response:
+            action = self.policy.act(torch.FloatTensor(state).to(self.device), 0, legal_cards_vec)
+        else:
+            action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(),
+                                            legal_cards_vec)
 
         return NFSPPlayer.action_to_card(action)
 
@@ -182,8 +183,8 @@ class NFSPPlayer(DurakPlayer):
 
     def end_game(self):
         state, action, reward, next_state, legal_cards, done = self.replay_buffer.buffer.pop()
-        if reward <20:
-            reward = -30
+        if reward < 20:
+            reward = -2
         done = 1
         self.replay_buffer.buffer.append((state, action, reward, next_state, legal_cards, done))
 
@@ -237,7 +238,8 @@ class NFSPPlayer(DurakPlayer):
         next_q_value = torch.FloatTensor([max(next_q_value)]).to(self.device)
         # todo fix expected q-value
         # expected_q_value = reward + (self.gamma ** self.round) * next_q_value
-        expected_q_value = reward + (next_q_value * (1-done)) 
+        # expected_q_value = reward + (next_q_value * (1-done)) * 0.95
+        expected_q_value = reward + (next_q_value * (1-done)) * 0.95
 
         # Huber Loss
         loss = F.smooth_l1_loss(
@@ -255,6 +257,7 @@ class NFSPPlayer(DurakPlayer):
         :param table: Cards on the table at the end of the round (before clearing)
         :param successfully_defended: Weather the defence was successful (which means all cards are discarded), or not (which means the defending player took all cards on the table).
         """
+        self.is_best_response = random.random() > self.eta
         if successfully_defended:
             cards_discarded_this_round = table[0]+table[1]
             cards_discarded_this_round_vec = self.get_cards_as_vector(cards_discarded_this_round)
@@ -270,6 +273,7 @@ class NFSPPlayer(DurakPlayer):
         self.prev_reward = None
         self.prev_action = None
         self.prev_state = None
+        self.is_best_response = random.random() > self.eta
 
     def save_network(self, name: str) -> None:
         """
