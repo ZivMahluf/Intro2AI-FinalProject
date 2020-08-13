@@ -2,6 +2,7 @@ from main import *
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from multiprocessing import Process
 
 
 def plot(x_axis, y_axes, title: str, x_label: str, y_label: str, legend: bool):
@@ -286,16 +287,14 @@ def train_against_one_random(epochs=50, training_games_per_epoch=50, test_games_
     plt.savefig('train_against_random.jpg')
 
 
-
 def train_against_nfsp_agent(epochs=50, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=50):
 
     directory = "train_against_nfsp/"
     # define players for learning phase
     learning_player1 = NFSPPlayer(hand_size, 'NFSP-PLAYER-1', 'cpu')
     learning_player2 = NFSPPlayer(hand_size, 'NFSP-PLAYER-2', 'cpu')
-    learning_players = [learning_player1,learning_player2]
+    learning_players = [learning_player1, learning_player2]
     random1 = RandomPlayer(hand_size, 'random-1')
-
 
 
     training_players = []
@@ -330,7 +329,6 @@ def train_against_nfsp_agent(epochs=50, training_games_per_epoch=50, test_games_
         learning_player1.save_network(
             directory+'epoc-' + str(epoch))
 
-
     # learning_player_info = {"VS. Test Players": ((1., 0., 0.), loss_ratio_vs_test_players), "VS. Training Players": ((0., 1., 0.), loss_ratio_vs_training_players)}
     learning_player_info = {"VS. Test Players": (
         (1., 0., 0.), loss_ratio_vs_test_players)}
@@ -342,12 +340,15 @@ def train_against_nfsp_agent(epochs=50, training_games_per_epoch=50, test_games_
     plt.savefig('train_against_nfsp.jpg')
 
 
-
 if __name__ == '__main__':
-    train_against_one_random()
+    p1 = Process(target=train_against_nfsp_agent, args=())
+    p2 = Process(target=train_against_one_random, args=())
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
     # train_against_prev_iter()
     # train_against_two_randoms()
     # train_against_one_randoms()
     # train_against_prev_iter_test_aginst_def()
     # train_against_prev_iter()
-
