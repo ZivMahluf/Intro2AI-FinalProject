@@ -18,6 +18,9 @@ class TrainedNFSPPlayer(NFSPPlayer):
     def learn_step(self, old_state, new_state, action, reward, old_hand):
         pass
 
+    def end_game(self):
+        pass
+
     def act(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         legal_cards_vec, state = NFSPPlayer.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         card = NFSPPlayer.action_to_card(self.policy.act(torch.FloatTensor(state), 0, legal_cards_vec))
