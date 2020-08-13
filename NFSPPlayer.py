@@ -182,8 +182,11 @@ class NFSPPlayer(DurakPlayer):
 
     def end_game(self):
         state, action, reward, next_state, legal_cards, done = self.replay_buffer.buffer.pop()
+        if reward <20:
+            reward = -30
         done = 1
-        self.replay_buffer.push(state, action, reward, next_state, legal_cards, done)
+        self.replay_buffer.buffer.append((state, action, reward, next_state, legal_cards, done))
+
 
     def compute_sl_loss(self) -> None:
         """
