@@ -256,12 +256,11 @@ Approach and Methods
 \begin_layout Standard
 For this game, we've decided to use reinforcement learning techniques to
  train the AI agents with two different algorithms.
- Both kinds of agents use a neural network to approximate the Q-value of
- a state for different actions, but use a different learning method.The use
- of a neural network to approximate the Q-values of a state different actions
- was chosen since the number of possible states in Durak is too large to
- store in memory, even without taking into account memory regarding the
- cards in other players' hands, the cards in the current player's hands,
+ NFSP learns using the Q value, while PPO learns using the Advantage.
+ The use of a neural network to approximate the Q-values of a state different
+ actions was chosen since the number of possible states in Durak is too
+ large to store in memory, even without taking into account memory regarding
+ the cards in other players' hands, the cards in the current player's hands,
  and discarded cards.
 \end_layout
 
@@ -303,7 +302,23 @@ PPO Agent:
 \end_layout
 
 \begin_layout Standard
-————————————
+The agent is trained using the Advantage value of the neural network, which
+ is calculated after the game is finished.
+ The calculated loss of the network is a linear combination of 3 different
+ losses - the entropy loss, the value function loss, and the 
+\begin_inset Quotes eld
+\end_inset
+
+conservative policy iteration
+\begin_inset Quotes erd
+\end_inset
+
+ loss.
+ Further information about the loss evaluation can be found at (Henry Charleswor
+th, 2018).
+ The reason we use these types of losses is to prevent changes that are
+ too big in the gradients, while encouraging exploration.
+ 
 \end_layout
 
 \begin_layout Part*
