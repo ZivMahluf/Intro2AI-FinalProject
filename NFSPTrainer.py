@@ -8,7 +8,8 @@ class NFSPTrainer:
     def __init__(self, learning_players: List[NFSPPlayer], other_players: List[DurakPlayer]):
         # only taking up to DurakEnv.MAX_PLAYERS players, starting from the learning players
         self.learning_players = learning_players[:DurakEnv.MAX_PLAYERS]
-        self.other_players = other_players[:(DurakEnv.MAX_PLAYERS - len(self.learning_players))]
+        self.other_players = other_players[:(
+            DurakEnv.MAX_PLAYERS - len(self.learning_players))]
         self.env = DurakEnv(self.other_players + self.learning_players)
         self.test_losers = list()
 
@@ -33,8 +34,12 @@ class NFSPTrainer:
                 act = turn_player.get_action(state, to_attack)
                 new_state, reward, done = self.env.step(act)
                 if isinstance(turn_player, NFSPPlayer):
-                    turn_player.learn_step(state, new_state, act, reward, self.env.turn_player.hand)
+                    turn_player.learn_step(
+                        state, new_state, act, reward, self.env.turn_player.hand)
                 state = new_state
                 self.env.render()
                 if done or count > 300:
                     break
+            for player in self.env.players:
+                if isinstance(player, NFSPPlayer):
+                    player.end_game()
