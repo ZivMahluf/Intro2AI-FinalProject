@@ -39,6 +39,9 @@ class Deck:
         return dealt_cards
 
     def shuffle(self) -> None:
+        """
+        Shuffles the deck.
+        """
         np.random.shuffle(self.__deck)
 
     @property
@@ -65,7 +68,7 @@ class Deck:
     @staticmethod
     def get_full_list_of_cards() -> CardListType:
         """
-        :return: A list of all cards in a deck.
+        :return: A list of all cards in a full deck.
         """
         return list(product(Deck.VALUES, Deck.SUITS))
 
@@ -73,7 +76,7 @@ class Deck:
     def get_index_from_card(card: CardType) -> int:
         """
         :param card: Legal card that appears in the deck.
-        :return: Index of the card in a full deck (not shuffled)
+        :return: Index of the card in a full non-shuffled deck.
         """
         if card == Deck.NO_CARD:
             return Deck().total_num_cards
@@ -82,8 +85,8 @@ class Deck:
     @staticmethod
     def get_card_from_index(index: int) -> CardType:
         """
-        :param index: index in range [0, len(full_deck_of_cards)]
-        :return: Card at the given index in a full non-shuffled deck
+        :param index: index in range [0, len(full_deck_of_cards)].
+        :return: Card at the given index in a full non-shuffled deck.
         """
         if index == Deck().total_num_cards:
             return Deck.NO_CARD
