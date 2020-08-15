@@ -133,6 +133,9 @@ class GUI:
         # Shows the deck (face down, on the table)
         for i in range(deck.current_num_cards):
             self.__screen.blit(self.__back_of_card_image, (self.__deck_initial_pos[0], self.__deck_initial_pos[1] - i))
+            if i == (deck.current_num_cards - 1):
+                num_cards_text = self.__font.render(str(deck.current_num_cards), True, (0, 0, 0))
+                self.__screen.blit(num_cards_text, (self.__deck_initial_pos[0] + 12, self.__deck_initial_pos[1]))
         # Updates the screen, and waits (the waiting is for people to be able to follow the game)
         pygame.display.flip()
         pygame.time.wait(1000)
@@ -150,7 +153,7 @@ class GUI:
         automatic agent would be rendered.
         :param message: A message to display.
         """
-        text = self.__font.render(message, True, (150, 150, 150))
+        text = self.__font.render(message, True, (0, 0, 0))
         rect = text.get_rect()
         human_player_text_position = self.__num_players_to_positions[1][0]
         rect.center = (human_player_text_position[0], human_player_text_position[1] + self.__size + 10)
