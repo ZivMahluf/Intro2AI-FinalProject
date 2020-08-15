@@ -1,12 +1,15 @@
 import tensorflow as tf
 import numpy as np
-# from baselines.a2c.utils import fc
-# from tensorflow.keras.layers import Dense as fc
 import joblib
 
 
 # Implementation takes from baselines.a2c.utils
 def ortho_init(scale=1.0):
+    """
+    Initializes variables with the given scale
+    :param scale: scale to initialize with
+    :return: initialized variables
+    """
     def _ortho_init(shape, dtype, partition_info=None):
         # lasagne ortho init for tf
         shape = tuple(shape)
@@ -27,6 +30,15 @@ def ortho_init(scale=1.0):
 
 # Implementation taken from baselines.a2c.utils
 def fc(x, scope, nh, *, init_scale=1.0, init_bias=0.0):
+    """
+    Creates a fully connected layer.
+    :param x: layer input
+    :param scope: name of variable scope
+    :param nh: number of neurons in the layer.
+    :param init_scale: initial scale
+    :param init_bias: initial bias
+    :return: Fully connected layer in tensorflow.
+    """
     with tf.compat.v1.variable_scope(scope):
         nin = x.get_shape()[1]
         w = tf.compat.v1.get_variable("w", [nin, nh], initializer=ortho_init(init_scale), dtype=tf.float64)
@@ -37,6 +49,14 @@ def fc(x, scope, nh, *, init_scale=1.0, init_bias=0.0):
 class PPONetwork(object):
 
     def __init__(self, sess, obs_dim, act_dim, name):
+        """
+        Constructor.
+        Sets up the parameters and structure of the network.
+        :param sess: tensorflow session.
+        :param obs_dim: input dimension of the network.
+        :param act_dim: action (output) dimension.
+        :param name: name of the network.
+        """
         self.obs_dim = obs_dim
         self.act_dim = act_dim
         self.name = name
@@ -66,10 +86,22 @@ class PPONetwork(object):
         neglogpac = -tf.compat.v1.log(tf.reduce_sum(tf.multiply(p0in, onehot), axis=-1))
 
         def step(obs, availAcs):
+            """
+            Preforms a step with the network.
+            :param obs: network input
+            :param availAcs: available actions to take
+            :return: action, value, -log(p)
+            """
             a, v, neglogp = sess.run([a0, vf, neglogpac], {X: obs, available_moves: availAcs})
             return a, v, neglogp
 
         def value(obs, availAcs):
+            """
+            Calculates the value of the given observation and the available actions.
+            :param obs: observation for which to calculate value.
+            :param availAcs: available actions.
+            :return: calculated value of the observation.
+            """
             return sess.run(vf, {X: obs, available_moves: availAcs})
 
         self.availPi = availPi
@@ -83,11 +115,18 @@ class PPONetwork(object):
         self.params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
 
         def getParams():
+            """
+            :return: the parameters of the network.
+            """
             return sess.run(self.params)
 
         self.getParams = getParams
 
         def loadParams(paramsToLoad):
+            """
+            Loads the given parameters to the network.
+            :param paramsToLoad: parameters to load.
+            """
             restores = []
             for p, loadedP in zip(self.params, paramsToLoad):
                 restores.append(p.assign(loadedP))
@@ -96,6 +135,10 @@ class PPONetwork(object):
         self.loadParams = loadParams
 
         def saveParams(path):
+            """
+            Saves the parameters of the network to the given file.
+            :param path: path to file to save the parameters in.
+            """
             modelParams = sess.run(self.params)
             joblib.dump(modelParams, path)
 
@@ -105,6 +148,17 @@ class PPONetwork(object):
 class PPOModel(object):
 
     def __init__(self, sess, network, inpDim, actDim, ent_coef, vf_coef, max_grad_norm):
+        """
+        Constructor.
+        Initializes the parameters of the model.
+        :param sess: tensorflow session.
+        :param network: network used by the model.
+        :param inpDim: input dimension.
+        :param actDim: output dimension.
+        :param ent_coef: coefficient used to calculate loss
+        :param vf_coef: coefficient used to calculate loss
+        :param max_grad_norm: coefficient used to calculate loss
+        """
         self.network = network
 
         # placeholder variables

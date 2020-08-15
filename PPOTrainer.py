@@ -1,5 +1,4 @@
-# main big2PPOSimulation class
-
+from Types import Tuple
 import numpy as np
 from PPONetwork import PPONetwork, PPOModel
 import tensorflow as tf
@@ -7,7 +6,6 @@ import joblib
 from Deck import Deck
 from DurakEnv import DurakEnv
 from PPOPlayer import PPOPlayer
-from DefensivePlayer import DefensivePlayer
 import logging
 import time
 import os
@@ -17,16 +15,31 @@ class PPOTrainer(object):
 
     def __init__(self, sess, *, games_per_batch=5, training_steps_per_game=5, lam=0.95, gamma=0.995, ent_coef=0.01, vf_coef=0.5,
                  max_grad_norm=0.5, min_learning_rate=0.000001, learning_rate, clip_range, save_every=100):
-
+        """
+        Constructor.
+        Sets up the parameters of the training networks and the algorithm.
+        :param sess: Tensorflow session in which to run.
+        :param games_per_batch: Number of games in each batch.
+        :param training_steps_per_game: Number of training steps performed in each game.
+        :param lam: coefficient used to calculate loss
+        :param gamma: discount factor.
+        :param ent_coef: coefficient used to calculate loss
+        :param vf_coef: coefficient used to calculate loss
+        :param max_grad_norm: coefficient used to calculate loss
+        :param min_learning_rate: minimal learning rate.
+        :param learning_rate: learning rate of the players.
+        :param clip_range: used to prevent large changes in the network
+        :param save_every: Frequency of saving of the model.
+        """
         # network/model for training
         output_dim = PPOPlayer.output_dim
         input_dim = PPOPlayer.input_dim
         self.trainingNetwork = PPONetwork(sess, input_dim, output_dim, "trainNet")
         self.trainingModel = PPOModel(sess, self.trainingNetwork, input_dim, output_dim, ent_coef, vf_coef, max_grad_norm)
 
-        # player networks which choose decisions -
+        # player networks which makes decisions -
         # allowing for later on experimenting with playing against older versions of the network (so decisions they make are not trained on).
-        self.playerNetworks = {}
+        self.playerNetworks = dict()
 
         # for now each player uses the same (up to date) network to make it's decisions.
         self.playerNetworks[1] = self.playerNetworks[2] = self.playerNetworks[3] = self.playerNetworks[4] = self.trainingNetwork
@@ -38,15 +51,6 @@ class PPOTrainer(object):
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 1", self.playerNetworks[2]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 2", self.playerNetworks[3]),
                         PPOPlayer(DurakEnv.HAND_SIZE, "PPO 3", self.playerNetworks[4])]
-
-        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        # self.playerNetworks[1].loadParams(params)
-        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        # self.playerNetworks[2].loadParams(params)
-        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        # self.playerNetworks[3].loadParams(params)
-        # params = joblib.load(os.curdir + '/PPOParams/' + 'model1000')
-        # self.playerNetworks[4].loadParams(params)
 
         # environment
         game = DurakEnv(self.players, False)
@@ -87,7 +91,11 @@ class PPOTrainer(object):
 
         logging.info("finished PPO Trainers init")
 
-    def run(self):
+    def run(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Runs a game for a number of steps and collects information of the game.
+        :return: information collected from the game.
+        """
         # run vectorized games for nSteps and generate mini batch to train on.
         mb_obs, mb_pGos, mb_actions, mb_values, mb_neglogpacs, mb_rewards, mb_dones, mb_availAcs = [], [], [], [], [], [], [], []
         done = False
@@ -147,9 +155,11 @@ class PPOTrainer(object):
         mb_returns = mb_advs + mb_values
 
         return mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs
-        # return map(sf01, (mb_obs, mb_availAcs, mb_returns, mb_actions, mb_values, mb_neglogpacs))
 
-    def get_batch(self):
+    def get_batch(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        :return: Information regarding a batch of games for training.
+        """
         states, availAcs, returns, actions, values, neglogpacs = [], [], [], [], [], []
         for _ in range(self.games_per_batch):
             st, av, re, ac, va, ne = self.run()
@@ -172,7 +182,11 @@ class PPOTrainer(object):
 
         return states, availAcs, returns, actions, values, neglogpacs
 
-    def train(self, total_num_games):
+    def train(self, total_num_games) -> None:
+        """
+        Trains the PPO players against themselves.
+        :param total_num_games: Number of training games.
+        """
 
         nUpdates = total_num_games // self.games_per_batch
 

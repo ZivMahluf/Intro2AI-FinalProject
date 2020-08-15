@@ -1,4 +1,4 @@
-from Types import CardListType, CardType, TableType
+from Types import CardListType, CardType, TableType, Tuple
 from DurakPlayer import DurakPlayer
 from PPONetwork import PPONetwork
 from Deck import Deck
@@ -10,10 +10,20 @@ import itertools
 
 class PPOPlayer(DurakPlayer):
 
+    """
+    Parameters regarding the input and output of the network the player uses.
+    """
     output_dim = len(Deck.get_full_list_of_cards()) + 1
     input_dim = 185  # hand, attacking cards, defending cards, memory and legal cards to play
 
     def __init__(self, hand_size: int, name: str, training_network=None, sess=None):
+        """
+        Constructor. Sets up the network with which the player will play.
+        :param hand_size: initial hand size.
+        :param name: name of the player.
+        :param training_network: neural network to train with.
+        :param sess: tensorflow session to train in.
+        """
         super().__init__(hand_size, name)
         self.memory = []
         self.last_converted_state = None
@@ -37,12 +47,24 @@ class PPOPlayer(DurakPlayer):
             print("loaded " + latest_file)
 
     def update_end_round(self, defending_player_name: str, table: TableType, successfully_defended: bool) -> None:
+        """
+        Updates the memory of the player at the end of the round.
+        :param defending_player_name: Name of the defending player
+        :param table: Cards on the table (attack, defence), number of cards in the deck, number of cards in each player's hand.
+        :param successfully_defended: weather the defender defended successfully.
+        """
         if successfully_defended:
             # update memory to include cards
             for card in itertools.chain(table[0], table[1]):
                 self.memory.append(card)
 
     def attack(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
+        """
+        Chooses a card to attack with using the player's network.
+        :param table: (attacking cards, defending cards, number of cards in deck, number of cards in each player's hand)
+        :param legal_cards_to_play: legal cards from the player's hand to play (might include Deck.NO_CARD)
+        :return: The chosen card to attack with (or Deck.NO_CARD)
+        """
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
@@ -51,11 +73,15 @@ class PPOPlayer(DurakPlayer):
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
-        else:
-            action = Deck.NO_CARD
         return action
 
     def defend(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
+        """
+        Chooses a card to defend with using the player's network.
+        :param table: (attacking cards, defending cards, number of cards in deck, number of cards in each player's hand)
+        :param legal_cards_to_play: legal cards from the player's hand to play (might include Deck.NO_CARD)
+        :return: The chosen card to defend with (or Deck.NO_CARD)
+        """
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
@@ -67,11 +93,18 @@ class PPOPlayer(DurakPlayer):
         return action
 
     def get_val_neglogpac(self):
+        """
+        :return: Values used for training the network.
+        """
         return self.value, self.neglogpac
 
     @staticmethod
-    def convert_input(input_tuple):
-        # the input tuple contains: hand, attacking_cards, defending_cards, memory, legal_cards_to_play
+    def convert_input(input_tuple: Tuple[CardListType, CardListType, CardListType, CardListType, CardListType]) -> np.ndarray:
+        """
+        Converts the given tuple of lists into a vector of features.
+        :param input_tuple: (cards in hand, attacking_cards, defending_cards, memory, legal_cards_to_play)
+        :return: A feature vector representing the cards in the lists.
+        """
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
         converted_state = np.zeros(shape=(1, deck_length * len(input_tuple)))
         for i in range(len(input_tuple)):
@@ -82,7 +115,12 @@ class PPOPlayer(DurakPlayer):
         return converted_state
 
     @staticmethod
-    def convert_available_cards(legal_cards_to_play):
+    def convert_available_cards(legal_cards_to_play: CardListType) -> np.ndarray:
+        """
+        Converts the given list of legal cards into a feature vector.
+        :param legal_cards_to_play: list of legal cards  to play.
+        :return: A representing feature vector.
+        """
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
         converted_available_cards = np.full(shape=(1, deck_length), fill_value=-np.inf)
         for card in legal_cards_to_play:
@@ -90,12 +128,19 @@ class PPOPlayer(DurakPlayer):
             converted_available_cards[0][card_idx] = 0
         return converted_available_cards
 
-    def initialize_for_game(self):
+    def initialize_for_game(self) -> None:
+        """
+        Initializes the player for the game.
+        """
         super().initialize_for_game()
         self.memory = []
 
-    def load_params(self, file_name):
-        params = joblib.load(os.curdir + '/PPOParams/' + file_name)
+    def load_params(self, file_name) -> None:
+        """
+        Loads parameters from the file ./PPOParams/file_name.
+        :param file_name: name of file holding the parameters.
+        """
+        params = joblib.load(os.path.join(os.path.join(os.curdir, 'PPOParams'), file_name))
         self.training_network.loadParams(params)
         print("loaded " + file_name)
 
