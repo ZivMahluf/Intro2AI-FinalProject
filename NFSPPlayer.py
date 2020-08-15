@@ -1,7 +1,7 @@
 from Types import CardType, CardListType, FieldType, TableType, StateType, NumberType
 from NFSPStorage import ReplayBuffer, ReservoirBuffer
 from DurakPlayer import DurakPlayer
-from NFSPModel import DQN, Policy
+from NFSPModel import DQNBase, Policy
 
 import torch.nn.functional as F
 import torch.optim as optim
@@ -17,56 +17,51 @@ from typing import Tuple, List
 
 class NFSPPlayer(DurakPlayer):
 
-    @staticmethod
-    def action_to_card(network_output: int):
-        if network_output == 36:
-            return -1, -1
-        return network_output % 9 + 6, int(network_output / 9)
-
-    def __init__(self, hand_size, name, device='cpu'):  # cuda for gpu
-        # todo pick storage size that is large enough
-        # in a game of 3 random players on average there are 120 steps per game. so for storing
-        # data for 25 games we should store 20 * 120 = 2400 steps
-        self.capacity = 15000  # 2400
-        self.rl_learning_rate = 0.01  # paper 0.1 experience ? # high learning rate here make the current q value tried 0.01
-        # more dominant (0.5, 0.7, 0.6
-        self.sl_learning_rate = 0.0005   # 0.005 experience ? high learning rate here make
-        # the network memorize responses better (0.0005, 0.00075, 0.0025, 0.001
+    def __init__(self, hand_size, name, device='cpu'):
+        """
+        Constructor.
+        Defines the parameters for the player.
+        :param hand_size: Initial hand size.
+        :param name: Name of the player.
+        :param device: Which device to run on ('cpu' for CPU, or 'cuda' for a NVIDIA GPU with the required drivers installed).
+        """
         super().__init__(hand_size, name)
-        self.current_model = DQN()
-        self.target_model = DQN()
+        self.capacity = 15000
+        self.rl_learning_rate = 0.01
+        self.sl_learning_rate = 0.0005
+        self.current_model = DQNBase()
+        self.target_model = DQNBase()
         self.policy = Policy()
-        self.update_target = lambda current, target: target.load_state_dict(
-            current.state_dict())
+        self.update_target = lambda current, target: target.load_state_dict(current.state_dict())
         self.update_target(self.current_model, self.target_model)
         self.reservoir_buffer = ReservoirBuffer(self.capacity)
         self.replay_buffer = ReplayBuffer(self.capacity)
-        self.rl_optimizer = optim.Adam(
-            self.current_model.parameters(), lr=self.rl_learning_rate)
-        self.sl_optimizer = optim.Adam(
-            self.policy.parameters(), lr=self.sl_learning_rate)
+        self.rl_optimizer = optim.Adam(self.current_model.parameters(), lr=self.rl_learning_rate)
+        self.sl_optimizer = optim.Adam(self.policy.parameters(), lr=self.sl_learning_rate)
         self.length_list = []
         self.reward_list = []
         self.rl_loss_list = []
         self.sl_loss_list = []
-        # self.gamma = 1 # 0.99
-        self.eta = 0.1  # todo : pick eta 0.1 experience 0.3
-        self.eps_start = 0.9  # 0.9 paper 0.06 check which epsilon function to use
-        self.eps_final = 0.01  # 0.0001
-        self.eps_decay = 300000  # todo : pick parameters that make sense, (10000, 10, )
+        self.eta = 0.1
+        self.eps_start = 0.9
+        self.eps_final = 0.01
+        self.eps_decay = 300000
         self.round = 1
         self.is_best_response = True
-        self.batch_size = 128   # todo check for the best batch size (paper 128)
+        self.batch_size = 128
         self.discard_pile = [0]*36
-        self.update_time = 1500  # paper 300, (1500, 3000)
+        self.update_time = 1500
         self.device = device
         self.prev_reward = None
         self.prev_state = None
         self.prev_action = None
 
-    def act(self, table: TableType, legal_cards_to_play: CardListType):
+    def act(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         """
-        get action
+        Chooses an action to do based on the given table and the legal cards to play.
+        :param table: (attacking cards, defending cards, number of cards in deck, number of cards in each player's hand)
+        :param legal_cards_to_play: list of legal cards to play out of the player's hand, and might include Deck.NO_CARD.
+        :return: The chosen card to play.
         """
         legal_cards_vec, state = self.get_network_input(legal_cards_to_play, table, self.discard_pile, self._hand)
         if self.prev_state:
@@ -75,103 +70,91 @@ class NFSPPlayer(DurakPlayer):
         if not self.is_best_response:
             action = self.policy.act(torch.FloatTensor(state).to(self.device), 0, legal_cards_vec)
         else:
-            action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(),
-                                            legal_cards_vec)
+            action = self.current_model.act(torch.FloatTensor(state).to(self.device), self.epsilon_by_round(), legal_cards_vec)
 
-        return NFSPPlayer.action_to_card(action)
+        return Deck.get_card_from_index(action)
 
     @staticmethod
     def get_network_input(legal_cards_to_play: CardListType, table: TableType, discard_pile: List[int], hand: CardListType) -> Tuple[List[int], List[int]]:
         """
-        returns network input
+        :return: Two indicator vectors:
+        1. An indicator vector of the legal actions that can be taken.
+        2. A feature representation of the table as a vector of indicators.
         """
-        legal_cards_vec = NFSPPlayer.get_legal_cards_as_vector(legal_cards_to_play)
+        legal_actions_vec = NFSPPlayer.get_legal_actions_as_vector(legal_cards_to_play)
         attacking_cards_vec = NFSPPlayer.get_cards_as_vector(table[0])
         defending_cards_vec = NFSPPlayer.get_cards_as_vector(table[1])
         hand_vec = NFSPPlayer.get_cards_as_vector(hand)
         not_possible_card_vec = discard_pile
-        state = legal_cards_vec + attacking_cards_vec + \
-            defending_cards_vec + hand_vec + not_possible_card_vec
-        return legal_cards_vec, state
+        state = legal_actions_vec + attacking_cards_vec + defending_cards_vec + hand_vec + not_possible_card_vec
+        return legal_actions_vec, state
 
     @staticmethod
-    def card_numeric_rep(card: CardType) -> int:
+    def get_legal_actions_as_vector(legal_cards_to_play: CardListType) -> List[int]:
         """
-        get numeric representation of card
-        """
-        # if card == (-1, -1) ret 36
-        return card[0] - 6 + card[1] * 9 if card[0] != -1 else 36
-
-    @staticmethod
-    def get_legal_cards_as_vector(legal_cards_to_play: CardListType) -> List[int]:
-        """
-        legal cards as vector
+        :return: An indicator vector of the legal actions that can be taken.
         """
         legal_cards = [0] * 37
         for card in legal_cards_to_play:
-            legal_cards[NFSPPlayer.card_numeric_rep(card)] = 1
+            legal_cards[Deck.get_index_from_card(card)] = 1
         return legal_cards
 
     @staticmethod
     def get_cards_as_vector(cards: CardListType) -> List[int]:
         """
-        get cards as vector
+        :param cards: A list of cards to transform.
+        :return: A representation of the given list of cards as a vector of indicators with a fixed legnth.
         """
         card_vec = [0] * 36
         for card in cards:
-            card_vec[NFSPPlayer.card_numeric_rep(card)] = 1
+            card_vec[Deck.get_index_from_card(card)] = 1
         return card_vec
 
     def attack(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
-        """
-        get attack action
-        """
         card = self.act(table, legal_cards_to_play)
-        if card[0] != -1:
+        if card != Deck.NO_CARD:
             self._hand.remove(card)
         return card
 
     def defend(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
-        """
-        get defend action
-        """
         card = self.act(table, legal_cards_to_play)
-        if card[0] != -1:
+        if card != Deck.NO_CARD:
             self._hand.remove(card)
         return card
 
     def epsilon_by_round(self) -> float:
         """
-        get epsilon for greedy epsilon q learning algo.
+        :return: epsilon for epsilon-greedy q-learning, as a function of the round.
         """
         return self.eps_final + (self.eps_start - self.eps_final) * m.exp(-1. * self.round / self.eps_decay)
-        # return self.eps_start * (1 / (self.round ** (1/2)))
 
     def learn_step(self, old_state: StateType, new_state: StateType, action: CardType, reward: NumberType, old_hand) -> None:
         """
-        update neural networks
+        Preforms a learning step using the previous and next states, the action taken, and the reward.
+        :param old_state: previous state
+        :param new_state: new state resulting from taking the action in the previous state
+        :param action: action taken in the previous state
+        :param reward: reward for the action
+        :param old_hand: cards in hand in the previous state
         """
-        is_attacking = False
-        if len(old_state[0]) < len(new_state[0]):
-            is_attacking = True
+        if action != Deck.NO_CARD:
+            is_attacking = len(old_state[0]) < len(new_state[0])
+        else:
+            card_to_check = old_state[0][0]
+            is_attacking = card_to_check not in self._hand
         if is_attacking:
             legal_old_cards = [card for card in old_state[2]
                                if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_new_cards = [card for card in new_state[2]
-                               if card in self._hand or card == Deck.NO_CARD]
         else:
             legal_old_cards = [card for card in old_state[3]
                                if card in self._hand or card == Deck.NO_CARD or card == action]
-            legal_new_cards = [card for card in new_state[3]
-                               if card in self._hand or card == Deck.NO_CARD]
         _, old_input = self.get_network_input(legal_old_cards, (old_state[0], old_state[1], old_state[4], old_state[5]), self.discard_pile, old_hand)
-        _, new_input = self.get_network_input(legal_new_cards, (new_state[0], new_state[1], new_state[4], new_state[5]), self.discard_pile, self._hand)
         self.prev_state = old_input
-        self.prev_action = NFSPPlayer.card_numeric_rep(action)
+        self.prev_action = Deck.get_index_from_card(action)
         self.prev_reward = reward
 
         if self.is_best_response:
-            self.reservoir_buffer.push(old_input, NFSPPlayer.card_numeric_rep(action))
+            self.reservoir_buffer.push(old_input, Deck.get_index_from_card(action))
         self.compute_sl_loss()
         # at the end of the episode logging record must be deleted
         self.compute_rl_loss()
@@ -179,17 +162,19 @@ class NFSPPlayer(DurakPlayer):
         if self.round % self.update_time == 0:
             self.update_target(self.current_model, self.target_model)
 
-    def end_game(self):
+    def end_game(self) -> None:
+        """
+        Appends to replay buffer at the end of the game.
+        """
         state, action, reward, next_state, legal_cards, done = self.replay_buffer.buffer.pop()
         if reward < 20:
             reward = -10
         done = 1
         self.replay_buffer.buffer.append((state, action, reward, next_state, legal_cards, done))
 
-
     def compute_sl_loss(self) -> None:
         """
-        Update policy neural network
+        Updates policy neural network
         """
         batch_size = min(self.batch_size, len(self.reservoir_buffer))
         if batch_size == 0:
@@ -210,7 +195,7 @@ class NFSPPlayer(DurakPlayer):
 
     def compute_rl_loss(self) -> None:
         """
-        Update current_model neural network
+        Updates current_model neural network
         """
         batch_size = min(self.batch_size, len(self.replay_buffer))
         if batch_size == 0:
@@ -234,9 +219,6 @@ class NFSPPlayer(DurakPlayer):
         next_q_value = target_next_q_values.cpu().detach().numpy().flatten()
         next_q_value[np.array(legal_cards) == 0] = -1 * float('inf')
         next_q_value = torch.FloatTensor([max(next_q_value)]).to(self.device)
-        # todo fix expected q-value
-        # expected_q_value = reward + (self.gamma ** self.round) * next_q_value
-        # expected_q_value = reward + (next_q_value * (1-done)) * 0.95
         expected_q_value = reward + (next_q_value * (1-done)) * 0.95
 
         # Huber Loss
@@ -306,6 +288,10 @@ class NFSPPlayer(DurakPlayer):
         self.update_target(self.current_model, self.target_model)
 
     def load_network_from_other_by_reference(self, other: "NFSPPlayer") -> None:
+        """
+        Loads network from another NFSP player.
+        :param other: player to lead the networks from.
+        """
         self.policy = other.policy
         self.current_model = other.current_model
         self.target_model = other.target_model

@@ -1,35 +1,24 @@
+from Types import List
+from Deck import Deck
 import torch
 import torch.nn as nn
 import numpy as np
-
 import random
 
 
-NUM_ACTIONS = 37
-INPUT_SIZE = 37 + 36*4
+NUM_ACTIONS = len(Deck.get_full_list_of_cards()) + 1
+INPUT_SIZE = 1 + 5 * len(Deck.get_full_list_of_cards())
 INPUT_SHAPE = (INPUT_SIZE,)
-HIDDEN_LAYER_DIM = 37  # todo maybe 32, 64
-
-
-def DQN():
-    return DQNBase()
 
 
 class DQNBase(nn.Module):
-    """
-    Basic DQN
-
-    parameters
-    ---------
-    env         environment(openai gym)
-    """
 
     def __init__(self):
+        """
+        Constructor.
+        Defines the neural network that will be used.
+        """
         super(DQNBase, self).__init__()
-
-        self.input_shape = INPUT_SHAPE
-        self.num_actions = NUM_ACTIONS  # todo - make constant somewhere
-        self.hidden_layer_dim = HIDDEN_LAYER_DIM
 
         self.fc = nn.Sequential(
             nn.Linear(INPUT_SIZE, 256),
@@ -44,40 +33,44 @@ class DQNBase(nn.Module):
             nn.ReLU(),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(64, self.num_actions),
-            nn.ReLU(),
+            nn.Linear(64, NUM_ACTIONS),
+            nn.ReLU()
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
+        """
+        :param x: Network input - vector of length INPUT_SIZE.
+        :return: Network output.
+        """
         x = self.fc(x)
         return x
 
-    def act(self, state, epsilon, legal_cards):
+    def act(self, state: torch.Tensor, epsilon: float, legal_cards: List[int]) -> int:
         """
-        Parameters
-        ----------
-        state       torch.Tensor with appropritate device type
-        epsilon     epsilon for epsilon-greedy
+        Decides on an action to take based on the given state, epsilon, and legal cards.
+        :param state: A torch Tensor representing a state and holding the network input.
+        :param epsilon: Epsilon for epsilon-greedy acting.
+        :param legal_cards: List of indicators of the legal cards to play.
+        :return: Index of an action in range [0, NUM_ACTIONS)
         """
         if random.random() > epsilon:  # NoisyNet does not use e-greedy
             with torch.no_grad():
                 state = state.unsqueeze(0)
-                q_value = self.forward(state).cpu().detach().numpy().flatten()
-                q_value[np.array(legal_cards) == 0] = -1 * float('inf')
-                action = np.random.choice(
-                    np.array([np.argmax(q_value)]).flatten())
+                q_values = self.forward(state).cpu().detach().numpy().flatten()
+                q_values[np.array(legal_cards) == 0] = -1 * float('inf')
+                action = np.random.choice(np.array([np.argmax(q_values)]).flatten())
         else:
-            action = np.random.choice(
-                np.array([np.nonzero(legal_cards)]).flatten())
+            action = np.random.choice(np.array([np.nonzero(legal_cards)]).flatten())
         return action
 
 
 class Policy(DQNBase):
-    """
-    Policy with only actors. This is used in supervised learning for NFSP.
-    """
 
     def __init__(self):
+        """
+        Constructor.
+        Defines the policy's neural network.
+        """
         super(Policy, self).__init__()
 
         self.fc = nn.Sequential(
@@ -93,21 +86,21 @@ class Policy(DQNBase):
             nn.ReLU(),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(64, self.num_actions),
+            nn.Linear(64, NUM_ACTIONS),
             nn.Softmax(dim=1),
         )
 
     def act(self, state, epsilon, legal_cards):
         """
-        Parameters
-        ----------
-        state       torch.Tensor with appropritate device type
+        Decides on an action to take based on the given state and legal cards.
+        :param state: A torch Tensor representing a state and holding the network input.
+        :param epsilon: Epsilon for epsilon-greedy acting (for this specific method, ignored).
+        :param legal_cards: List of indicators of the legal cards to play.
+        :return: Index of an action in range [0, NUM_ACTIONS)
         """
         with torch.no_grad():
             new_state = state.unsqueeze(0)
-            distribution = self.forward(
-                new_state).cpu().detach().numpy().flatten()
-            distribution[np.array(legal_cards) == 0] = -1 * float('inf')
-            action = np.random.choice(
-                np.array([np.argmax(distribution)]).flatten())
+            distribution = self.forward(new_state).cpu().detach().numpy().flatten()
+            distribution[np.array(legal_cards) == 0] = -np.inf
+            action = np.random.choice(np.array([np.argmax(distribution)]).flatten())
             return action
