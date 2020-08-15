@@ -227,17 +227,3 @@ class PPOTrainer(object):
                 joblib.dump(self.epInfos, "epInfos.pkl")
 
             print("finished " + str(update * self.games_per_batch))
-
-    def get_players(self):
-        return self.players
-
-    def get_learning_players_names(self):
-        return [player.name for player in self.players]
-
-
-if __name__ == "__main__":
-    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
-    with tf.compat.v1.Session() as sess:
-        mainSim = PPOTrainer(sess, games_per_batch=5, training_steps_per_game=25, learning_rate=0.00025, clip_range=0.2, save_every=100)
-        mainSim.train(500000)
-    logging.shutdown()
