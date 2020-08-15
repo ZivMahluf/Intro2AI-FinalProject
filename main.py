@@ -65,6 +65,7 @@ def do_test_games(players: List[DurakPlayer], num_games: int, steps_lim=500) -> 
 
 def get_sorted_filenames_and_indices():
     """
+    Loads every 5000'th model fro mthe directory in which the PPO models are saved.
     :return: Sorted list of files of PPO models from the directory in which they are saved.
     """
     files = [(int(f[5:]), f) for f in os.listdir(ppo_saved_models_dir) if f.find('model') != -1 and int(f[5:]) % 5000 == 0]
