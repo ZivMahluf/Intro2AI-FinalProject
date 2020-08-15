@@ -27,7 +27,7 @@ class DurakEnv:
         self.to_render = render or (True in [isinstance(player, HumanPlayer) for player in players])  # if a human player is given, always render
         self.attacker = 0
         self.defender = 1
-        self.trump_suit = self.deck.HEARTS
+        self.trump_suit = Deck.HEARTS
         # changing parameters (will be re-initialized upon calling the reset method):
         self.active_players = players[:]
         self.attacking_player = None
