@@ -5,35 +5,40 @@ from RandomPlayer import RandomPlayer
 from HumanPlayer import HumanPlayer
 from DurakPlayer import DurakPlayer
 from NFSPPlayer import NFSPPlayer
-from PPOPlayer import PPOPlayer, from_path
+from PPOPlayer import from_path
 
-from Types import List
+from Types import List, Dict, NumberType, Tuple
 from NFSPTrainer import NFSPTrainer
 from PPOTrainer import PPOTrainer
-from PPONetwork import PPONetwork
 from DurakEnv import DurakEnv
 
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import numpy as np
 import logging
 import random
 import shutil
-import joblib
 import sys
 import os
 
 
+"""
+General useful parameters.
+"""
 colors = ["gray", "yellowgreen", "blue", "brown", "deeppink", "red", "coral", "peru", "darkorange", "gold", "darkkhaki",
           "yellow", "forestgreen", "lime", "darkslategray", "cyan", "dodgerblue", "royalblue", "indigo", "purple"]
-figure_size = (20, 10.65625)
-figure_legend_loc = 'upper right'
 hand_size = DurakEnv.HAND_SIZE
 nfsp_saved_models_dir = os.path.join(os.getcwd(), "NFSP-models")
 ppo_saved_models_dir = os.path.join(os.getcwd(), "PPOParams")
 
 
-def do_test_games(players: List[DurakPlayer], num_games: int, steps_lim=500):
+def do_test_games(players: List[DurakPlayer], num_games: int, steps_lim=500) -> Dict[str, float]:
+    """
+    Performs test games and collects loss ratios in % of each player.
+    :param players: list of players.
+    :param num_games: number of games.
+    :param steps_lim: limit of steps for each game.
+    :return: dictionary mapping the name of each player to their % of losses
+    """
     loss_ratios = {player.name: 0 for player in players}
     env = DurakEnv(players, False)
     print_every = min(num_games // 10, 50)
@@ -59,12 +64,21 @@ def do_test_games(players: List[DurakPlayer], num_games: int, steps_lim=500):
 
 
 def get_sorted_filenames_and_indices():
+    """
+    :return: Sorted list of files of PPO models from the directory in which they are saved.
+    """
     files = [(int(f[5:]), f) for f in os.listdir(ppo_saved_models_dir) if f.find('model') != -1 and int(f[5:]) % 5000 == 0]
     files.sort(key=lambda x: x[0])
     return list(zip(*files))
 
 
 def run_against_one_random(params_filename, games):
+    """
+    Runs test games against a single random player and returns the loss ration in range [0, 1]
+    :param params_filename: path of the file containing the parameters of the model to test.
+    :param games: number of test games.
+    :return: loss ratio of the player in range [0, 1]
+    """
     with tf.compat.v1.Session() as sess:
         player1 = from_path(sess, DurakEnv.HAND_SIZE, "Trained1_PPO_" + params_filename, os.path.join(ppo_saved_models_dir,  params_filename))
         player2 = RandomPlayer(DurakEnv.HAND_SIZE, "RandomPlayer")
@@ -73,6 +87,12 @@ def run_against_one_random(params_filename, games):
 
 
 def run_against_3_randoms(params_filename, games):
+    """
+    Runs test games against 3 random players and returns the loss ration in range [0, 1]
+    :param params_filename: path of the file containing the parameters of the model to test.
+    :param games: number of test games.
+    :return: loss ratio of the player in range [0, 1]
+    """
     with tf.compat.v1.Session() as sess:
         player1 = from_path(sess, DurakEnv.HAND_SIZE, "Trained2_PPO_" + params_filename, os.path.join(ppo_saved_models_dir,  params_filename))
         player2 = RandomPlayer(DurakEnv.HAND_SIZE, "RandomPlayer1")
@@ -83,6 +103,12 @@ def run_against_3_randoms(params_filename, games):
 
 
 def run_against_3_defensives(params_filename, games):
+    """
+    Runs test games against 3 defensive players and returns the loss ration in range [0, 1]
+    :param params_filename: path of the file containing the parameters of the model to test.
+    :param games: number of test games.
+    :return: loss ratio of the player in range [0, 1]
+    """
     with tf.compat.v1.Session() as sess:
         player1 = from_path(sess, DurakEnv.HAND_SIZE, "Trained3_PPO_" + params_filename, os.path.join(ppo_saved_models_dir,  params_filename))
         player2 = DefensivePlayer(DurakEnv.HAND_SIZE, "DefensivePlayer1")
@@ -93,6 +119,12 @@ def run_against_3_defensives(params_filename, games):
 
 
 def run_against_3_aggressives(params_filename, games):
+    """
+    Runs test games against 3 aggressive players and returns the loss ration in range [0, 1]
+    :param params_filename: path of the file containing the parameters of the model to test.
+    :param games: number of test games.
+    :return: loss ratio of the player in range [0, 1]
+    """
     with tf.compat.v1.Session() as sess:
         player1 = from_path(sess, DurakEnv.HAND_SIZE, "Trained4_PPO_" + params_filename, os.path.join(ppo_saved_models_dir,  params_filename))
         player2 = AggressivePlayer(DurakEnv.HAND_SIZE, "AggressivePlayer1")
@@ -102,22 +134,24 @@ def run_against_3_aggressives(params_filename, games):
         return loss_ratios[player1.name] / 100
 
 
-def plot_graph(title, indices, losses):
+def plot_graph(title, x_axis, y_axis):
+    """
+    Plots a single graph on a figure.
+    :param title: title of the plot.
+    :param x_axis: x axis values.
+    :param y_axis: y axis values.
+    """
     plt.figure()
     plt.title(title)
     plt.xlabel("Player Model Number")
     plt.ylabel("Loss Ratios")
     plt.ylim(0, 1)
-    plt.plot(indices, losses)
+    plt.plot(x_axis, y_axis)
 
 
 def train_ppo():
     """
     Trains a PPO player.
-    :param sess: tensorflow session
-    :param games_per_batch: number of training games per batch
-    :param save_every: frequency of saving the model parameters (saved every save_every batches)
-    :param training_games: total number of training games to train for
     """
     # Resets the folder of the saved parameters
     if not os.path.exists(ppo_saved_models_dir):
@@ -129,12 +163,15 @@ def train_ppo():
                              training_steps_per_game=25,
                              learning_rate=0.00025,
                              clip_range=0.2,
-                             save_every=100)
-        trainer.train(500000)
+                             save_every=1)
+        trainer.train(500)
     logging.shutdown()
 
 
 def test_and_plot_ppo():
+    """
+    Tests the PPO player against test cases.
+    """
     games = 300
     logging.basicConfig(filename='logs/PPOTester_log', level=logging.INFO)
     indices, files = get_sorted_filenames_and_indices()
@@ -166,11 +203,23 @@ def test_and_plot_ppo():
 
 
 def generate_ppo_plots():
+    """
+    Calls the training function for the PPO player and then calls the test and plot function.
+    """
     train_ppo()
     test_and_plot_ppo()
 
 
-def plot(x_axis, y_axes, title: str, x_label: str, y_label: str, legend: bool):
+def plot(x_axis: List[NumberType], y_axes: Dict[str, Tuple[Tuple[float, float, float], List[NumberType]]], title: str, x_label: str, y_label: str, legend: bool):
+    """
+    Plots multiple plots to the same figure.
+    :param x_axis: values of the x axis.
+    :param y_axes: a dictionary mapping the label of the plots to the color of the plot and the y axis values.
+    :param title: figure title.
+    :param x_label: x axis label.
+    :param y_label: y axis label.
+    :param legend: weather to display a legend (mapping each plot label to the plot)
+    """
     plt.figure()
     plt.title(title)
     plt.xlabel(x_label)
@@ -183,6 +232,12 @@ def plot(x_axis, y_axes, title: str, x_label: str, y_label: str, legend: bool):
 
 
 def train_against_prev_iter(subdir, epochs=100, training_games_per_epoch=50):
+    """
+    Trains a NFSP agent against a previous iteration of itself.
+    :param subdir: subdirectory in which to save the models while training.
+    :param epochs: number of training epochs.
+    :param training_games_per_epoch: number of training games per epoch.
+    """
     full_subdir_path = os.path.join(nfsp_saved_models_dir, subdir)
     if os.path.exists(full_subdir_path):
         shutil.rmtree(full_subdir_path)
@@ -205,6 +260,12 @@ def train_against_prev_iter(subdir, epochs=100, training_games_per_epoch=50):
 
 
 def train_against_one_random(subdir, epochs=100, training_games_per_epoch=50):
+    """
+    Trains a NFSP agent against a random player.
+    :param subdir: subdirectory in which to save the models while training.
+    :param epochs: number of training epochs.
+    :param training_games_per_epoch: number of training games per epoch.
+    """
     full_subdir_path = os.path.join(nfsp_saved_models_dir, subdir)
     if os.path.exists(full_subdir_path):
         shutil.rmtree(full_subdir_path)
@@ -223,6 +284,12 @@ def train_against_one_random(subdir, epochs=100, training_games_per_epoch=50):
 
 
 def train_against_nfsp_agent(subdir, epochs=100, training_games_per_epoch=50):
+    """
+    Trains two NFSP agents against each other.
+    :param subdir: subdirectory in which to save the models while training.
+    :param epochs: number of training epochs.
+    :param training_games_per_epoch: number of training games per epoch.
+    """
     full_subdir_path = os.path.join(nfsp_saved_models_dir, subdir)
     if os.path.exists(full_subdir_path):
         shutil.rmtree(full_subdir_path)
@@ -240,6 +307,14 @@ def train_against_nfsp_agent(subdir, epochs=100, training_games_per_epoch=50):
 
 
 def graph(subdir, title, file_name, training_games_per_epoch=50, test_games_per_epoch_vs_test_players=500):
+    """
+    Plots the results of the NFSP models saved in the given subdirectory vs. test cases.
+    :param subdir: subdirectory in which the NFSP models are saved.
+    :param title: figure title.
+    :param file_name: name of file to save the figure.
+    :param training_games_per_epoch: number of training games per epoch used in training of the models.
+    :param test_games_per_epoch_vs_test_players: number of test games for each model against each test case.
+    """
     filenames = os.listdir(os.path.join(nfsp_saved_models_dir, subdir))
     cumulative_training_games_per_epoch = list(range(training_games_per_epoch, training_games_per_epoch * len(filenames) + 1, training_games_per_epoch))
     loss_ratio_vs_1_random = []
@@ -264,9 +339,12 @@ def graph(subdir, title, file_name, training_games_per_epoch=50, test_games_per_
 
 
 def train_and_plot_nfsp():
-    epochs = 100
-    training_games_per_epoch = 20
-    test_games_per_epoch = 20
+    """
+    Calls the training and plotting functions for the NFSP agents.
+    """
+    epochs = 10
+    training_games_per_epoch = 50
+    test_games_per_epoch = 50
     subdir = 'train_against_prev_iter'
     train_against_prev_iter(subdir, epochs, training_games_per_epoch)
     graph(subdir, "NFSP trained against previous iterations", "Trained vs Previous Iterations.jpg", training_games_per_epoch, test_games_per_epoch)
@@ -279,8 +357,11 @@ def train_and_plot_nfsp():
 
 
 def run_example_game():
+    """
+    Runs a complete example game.
+    """
     players = [HumanPlayer(hand_size, "Human"),
-               DefensivePlayer(hand_size, "Defensive")]
+               DefensivePlayer(hand_size, "Player")]
     env = DurakEnv(players, True)
     done = False
     state = env.reset()
@@ -293,6 +374,9 @@ def run_example_game():
 
 
 def main():
+    """
+    Runs the appropriate function according to the given arguments.
+    """
     example = '0'
     ppo = '1'
     nfsp = '2'
