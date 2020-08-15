@@ -143,17 +143,18 @@ class DurakPlayer:
         pass
 
     def set_gui(self, gui) -> None:
+        """
+        Sets a GUI for the player to use (in needed)
+        :param gui: GUI to set.
+        """
         pass
 
     def initialize_for_game(self) -> None:
-        self._trump_suit = None
-        self._other_suits = None
+        """
+        Initializes parameters for a game.
+        """
         self.last_hand = []
         self._hand = []
-
-    @property
-    def get_others_suit(self) -> List[int]:
-        return self._other_suits
 
     @property
     def hand_size(self) -> int:
