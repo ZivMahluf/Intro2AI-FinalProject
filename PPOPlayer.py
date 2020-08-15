@@ -1,5 +1,7 @@
-from DurakPlayer import Deck, Tuple, List, Optional, DurakPlayer
+from Types import CardListType, CardType, TableType
+from DurakPlayer import DurakPlayer
 from PPONetwork import PPONetwork
+from Deck import Deck
 import joblib
 import numpy as np
 import os
@@ -21,10 +23,8 @@ class PPOPlayer(DurakPlayer):
         self.neglogpac = 0
 
         if training_network:
-            self.test_phase = False
             self.training_network = training_network  # this will be done in the training phase
         else:
-            self.test_phase = True
             # load the network from memory, and use it for interpretation (not training)
             self.training_network = PPONetwork(sess, self.input_dim, self.output_dim, "testNet")
 
@@ -36,19 +36,13 @@ class PPOPlayer(DurakPlayer):
             self.training_network.loadParams(params)
             print("loaded " + latest_file)
 
-    def update_end_round(self, defending_player_name: str, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
-                         successfully_defended: bool) -> None:
+    def update_end_round(self, defending_player_name: str, table: TableType, successfully_defended: bool) -> None:
         if successfully_defended:
             # update memory to include cards
             for card in itertools.chain(table[0], table[1]):
                 self.memory.append(card)
-        else:
-            # You can save the memory for each player separately here. We chose not to.
-            pass
 
-    def attack(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
-               legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
-
+    def attack(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
@@ -59,14 +53,9 @@ class PPOPlayer(DurakPlayer):
             self._hand.remove(action)
         else:
             action = Deck.NO_CARD
-
-        if self.test_phase:
-            return action
         return action
 
-    def defend(self, table: Tuple[List[Deck.CardType], List[Deck.CardType]],
-               legal_cards_to_play: List[Deck.CardType]) -> Optional[Deck.CardType]:
-
+    def defend(self, table: TableType, legal_cards_to_play: CardListType) -> CardType:
         converted_state = self.convert_input((self.hand, table[0], table[1], self.memory, legal_cards_to_play))
         self.last_converted_state = converted_state
         converted_available_cards = self.convert_available_cards(legal_cards_to_play)
@@ -75,26 +64,25 @@ class PPOPlayer(DurakPlayer):
         action = Deck.get_card_from_index(action[0])
         if action != Deck.NO_CARD:
             self._hand.remove(action)
-
-        if self.test_phase:
-            return action
         return action
 
     def get_val_neglogpac(self):
         return self.value, self.neglogpac
 
-    def convert_input(self, input):
-        # the input contains: hand, attacking_cards, defending_cards, memory, legal_cards_to_play
+    @staticmethod
+    def convert_input(input_tuple):
+        # the input tuple contains: hand, attacking_cards, defending_cards, memory, legal_cards_to_play
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
-        converted_state = np.zeros(shape=(1, deck_length * len(input)))
-        for i in range(len(input)):
-            for card in input[i]:
+        converted_state = np.zeros(shape=(1, deck_length * len(input_tuple)))
+        for i in range(len(input_tuple)):
+            for card in input_tuple[i]:
                 card_idx = Deck.get_index_from_card(card)
                 converted_state[0][deck_length * i + card_idx] = 1
 
         return converted_state
 
-    def convert_available_cards(self, legal_cards_to_play):
+    @staticmethod
+    def convert_available_cards(legal_cards_to_play):
         deck_length = len(Deck.get_full_list_of_cards()) + 1  # +1 for NO CARD
         converted_available_cards = np.full(shape=(1, deck_length), fill_value=-np.inf)
         for card in legal_cards_to_play:
@@ -127,7 +115,6 @@ def from_path(sess, hand_size, name, path) -> PPOPlayer:
         parameters = joblib.load(path)
         network.loadParams(parameters)
         player = PPOPlayer(hand_size, name, network, sess)
-        player.test_phase = True
         print("loaded " + name)
         return player
     except:
