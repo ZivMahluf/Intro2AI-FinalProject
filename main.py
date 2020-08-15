@@ -156,23 +156,21 @@ def train_ppo():
     # Resets the folder of the saved parameters
     if not os.path.exists(ppo_saved_models_dir):
         os.mkdir(ppo_saved_models_dir)
-    logging.basicConfig(filename='logs/PPOTrainer_log', level=logging.INFO)
     with tf.compat.v1.Session() as sess:
         trainer = PPOTrainer(sess,
                              games_per_batch=5,
                              training_steps_per_game=25,
                              learning_rate=0.00025,
                              clip_range=0.2,
-                             save_every=1)
-        trainer.train(500)
-    logging.shutdown()
+                             save_every=100)
+        trainer.train(500000)
 
 
 def test_and_plot_ppo():
     """
     Tests the PPO player against test cases.
     """
-    games = 300
+    games = 100
     logging.basicConfig(filename='logs/PPOTester_log', level=logging.INFO)
     indices, files = get_sorted_filenames_and_indices()
     # run against 1 random player, save results, and plot graph
@@ -342,9 +340,9 @@ def train_and_plot_nfsp():
     """
     Calls the training and plotting functions for the NFSP agents.
     """
-    epochs = 10
-    training_games_per_epoch = 50
-    test_games_per_epoch = 50
+    epochs = 100
+    training_games_per_epoch = 100
+    test_games_per_epoch = 100
     subdir = 'train_against_prev_iter'
     train_against_prev_iter(subdir, epochs, training_games_per_epoch)
     graph(subdir, "NFSP trained against previous iterations", "Trained vs Previous Iterations.jpg", training_games_per_epoch, test_games_per_epoch)
@@ -353,7 +351,7 @@ def train_and_plot_nfsp():
     graph(subdir, "NFSP trained against random player", "Trained vs One Random Player.jpg", training_games_per_epoch, test_games_per_epoch)
     subdir = 'train_against_nfsp'
     train_against_nfsp_agent(subdir, epochs, training_games_per_epoch)
-    graph(subdir, "NFSP trained against another NFSP", "Trained vs Another NFSP Player.jpg", training_games_per_epoch, )
+    graph(subdir, "NFSP trained against another NFSP", "Trained vs Another NFSP Player.jpg", training_games_per_epoch, test_games_per_epoch)
 
 
 def run_example_game():
