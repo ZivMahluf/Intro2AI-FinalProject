@@ -171,7 +171,7 @@ def test_and_plot_ppo():
     """
     Tests the PPO player against test cases.
     """
-    games = 100
+    games = 10
     logging.basicConfig(filename='logs/PPOTester_log', level=logging.INFO)
     indices, files = get_sorted_filenames_and_indices()
     # run against 1 random player, save results, and plot graph
@@ -344,6 +344,8 @@ def train_and_plot_nfsp():
     epochs = 100
     training_games_per_epoch = 100
     test_games_per_epoch = 100
+    if not os.path.exists(nfsp_saved_models_dir):
+        os.mkdir(nfsp_saved_models_dir)
     subdir = 'train_against_prev_iter'
     train_against_prev_iter(subdir, epochs, training_games_per_epoch)
     graph(subdir, "NFSP trained against previous iterations", "Trained vs Previous Iterations.jpg", training_games_per_epoch, test_games_per_epoch)
@@ -380,7 +382,7 @@ def main():
     ppo = '1'
     nfsp = '2'
     ppo_and_nfsp = '3'
-    arg = sys.argv[1] if len(sys.argv) >= 2 else '0'
+    arg = sys.argv[1] if len(sys.argv) >= 2 and sys.argv[1] in [ppo, nfsp, ppo_and_nfsp] else '0'
     show = False if len(sys.argv) >= 3 and sys.argv[2] == 'f' else True
     if arg == example:
         print("Running example game")
