@@ -381,7 +381,7 @@ def main():
     nfsp = '2'
     ppo_and_nfsp = '3'
     arg = sys.argv[1] if len(sys.argv) >= 2 else '0'
-    show = False if len(sys.argv) < 3 or sys.argv[2] == 'f' else True
+    show = False if len(sys.argv) >= 3 and sys.argv[2] == 'f' else True
     if arg == example:
         print("Running example game")
         run_example_game()
