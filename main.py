@@ -68,7 +68,7 @@ def get_sorted_filenames_and_indices():
     Loads every 5000'th model fro mthe directory in which the PPO models are saved.
     :return: Sorted list of files of PPO models from the directory in which they are saved.
     """
-    files = [(int(f[5:]), f) for f in os.listdir(ppo_saved_models_dir) if f.find('model') != -1 and int(f[5:]) % 5000 == 0]
+    files = [(int(f[5:]), f) for f in os.listdir(ppo_saved_models_dir) if f.find('model') != -1 and int(f[5:]) % 15000 == 0]
     files.sort(key=lambda x: x[0])
     return list(zip(*files))
 
@@ -148,6 +148,7 @@ def plot_graph(title, x_axis, y_axis):
     plt.ylabel("Loss Ratios")
     plt.ylim(0, 1)
     plt.plot(x_axis, y_axis)
+    plt.savefig(title.replace('\n', '') + ".jpg")
 
 
 def train_ppo():
@@ -172,7 +173,11 @@ def test_and_plot_ppo():
     Tests the PPO player against test cases.
     """
     games = 10
-    logging.basicConfig(filename='logs/PPOTester_log', level=logging.INFO)
+    logs_dir = os.path.join(os.getcwd(), 'logs')
+    if not os.path.exists(logs_dir):
+        os.mkdir(logs_dir)
+    log_filename = os.path.join(logs_dir, 'PPOTester_log')
+    logging.basicConfig(filename=log_filename, level=logging.INFO)
     indices, files = get_sorted_filenames_and_indices()
     # run against 1 random player, save results, and plot graph
     random_losses = []
